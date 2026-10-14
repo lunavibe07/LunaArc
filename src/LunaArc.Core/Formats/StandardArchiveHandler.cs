@@ -85,6 +85,10 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         var readerOptions = new ReaderOptions { Password = options.Password, LeaveStreamOpen = false };
         using var archive = ArchiveFactory.OpenArchive(archivePath, readerOptions);
 
+        var noCrc = archive.Type == ArchiveType.Zip
+            ? ZipAesIntegrity.Validate(archivePath, options.Password, archive.Entries.ToArray(), controller)
+            : new HashSet<IArchiveEntry>();
+
         long totalBytes = archive.Entries.Where(e => !e.IsDirectory).Sum(e => e.Size);
         long processedBytes = 0;
 
@@ -133,6 +137,7 @@ public sealed class StandardArchiveHandler : IArchiveBackend
                 }
             }
 
+            uint expectedCrc = (uint)entry.Crc;
             await AtomicExtractFile.WriteAsync(safeTargetPath, options.KeepBrokenFiles, controller.Token, async outFile =>
             {
                 await using var entryStream = entry.OpenEntryStream();
@@ -144,7 +149,7 @@ public sealed class StandardArchiveHandler : IArchiveBackend
                     entry.Size,
                     controller,
                     (curr, _) => onProgress?.Invoke(entryBase + curr, Math.Max(1, totalBytes), entryKey));
-                if (archive.Type == ArchiveType.Zip && crc != (uint)entry.Crc)
+                if (archive.Type == ArchiveType.Zip && !noCrc.Contains(entry) && crc != expectedCrc)
                     throw new InvalidDataException($"CRC32 mismatch in '{entryKey}'.");
             });
             if (entry.LastModifiedTime.HasValue)
@@ -336,10 +341,12 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         return await Task.Run(() =>
         {
             using var archive = ArchiveFactory.OpenArchive(archivePath, new ReaderOptions { Password = password, LeaveStreamOpen = false });
+            var noCrc = archive.Type == ArchiveType.Zip
+                ? ZipAesIntegrity.Validate(archivePath, password, archive.Entries.ToArray(), controller)
+                : new HashSet<IArchiveEntry>();
             var fileEntries = archive.Entries.Where(e => !e.IsDirectory).ToList();
             total = fileEntries.Count;
 
-            byte[] buf = new byte[16384];
             for (int i = 0; i < fileEntries.Count; i++)
             {
                 controller.WaitIfPaused();
@@ -351,16 +358,13 @@ public sealed class StandardArchiveHandler : IArchiveBackend
 
                 try
                 {
-                    using var stream = entry.OpenEntryStream();
-                    uint crc = 0xffffffff;
-                    int read;
-                    while ((read = stream.Read(buf)) > 0)
-                    {
-                        controller.WaitIfPaused();
-                        controller.Token.ThrowIfCancellationRequested();
-                        crc = Crc32Verifier.UpdateCrc32(crc, buf.AsSpan(0, read));
-                    }
-                    if (archive.Type == ArchiveType.Zip && ~crc != (uint)entry.Crc)
+                    long expectedLength = entry.Size;
+                    uint expectedCrc = (uint)entry.Crc;
+                    using var output = new VerificationWriteStream(controller, expectedLength);
+                    entry.WriteTo(output, new SharpCompress.Common.ExtractionOptions { CheckCrc = true });
+                    if (output.Written != expectedLength)
+                        throw new InvalidDataException($"Size mismatch in '{key}'.");
+                    if (archive.Type == ArchiveType.Zip && !noCrc.Contains(entry) && output.Crc != expectedCrc)
                         throw new InvalidDataException($"CRC32 mismatch in '{key}'.");
                     passed++;
                 }

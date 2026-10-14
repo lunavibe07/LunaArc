@@ -21,6 +21,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly Stack<int> _folderHistory = new();
     private readonly List<VfsRowItem> _folderRows = new();
     private int _currentParentIndex = -1;
+    private string? _recoveredSessionPassword;
+    private string? ArchivePassword => _recoveredSessionPassword ??
+        (string.IsNullOrEmpty(PasswordInput) ? null : PasswordInput);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WindowTitle))]
@@ -90,7 +93,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _liveWatcher.OnTempFileModified += HandleLiveFileEdited;
     }
 
-    public async Task OpenArchiveFileAsync(string archivePath)
+    public async Task OpenArchiveFileAsync(string archivePath, string? recoveredPassword = null)
     {
         try
         {
@@ -98,8 +101,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             StatusMessage = $"Reading catalog {Path.GetFileName(archivePath)}...";
             var sw = Stopwatch.StartNew();
 
-            string? pwd = string.IsNullOrWhiteSpace(PasswordInput) ? null : PasswordInput;
+            string? pwd = recoveredPassword ?? (string.IsNullOrEmpty(PasswordInput) ? null : PasswordInput);
             _currentArena = await _backend.ReadCatalogAsync(archivePath, pwd);
+            _recoveredSessionPassword = recoveredPassword;
             CurrentArchivePath = archivePath;
             _folderHistory.Clear();
             _currentParentIndex = -1;
@@ -181,6 +185,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (IsBusy) return;
         _currentArena = null;
+        _recoveredSessionPassword = null;
         CurrentArchivePath = string.Empty;
         _currentParentIndex = -1;
         _folderRows.Clear();
@@ -228,7 +233,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 new ExtractOptions
                 {
                     DestinationDirectory = _liveWatcher.SessionDirectory,
-                    Password = string.IsNullOrWhiteSpace(PasswordInput) ? null : PasswordInput,
+                    Password = ArchivePassword,
                     SelectedEntries = new HashSet<string> { SelectedItem.FullRelativePath },
                     SmartFolderCreation = false
                 },
@@ -276,7 +281,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 new ExtractOptions
                 {
                     DestinationDirectory = destinationFolder,
-                    Password = string.IsNullOrWhiteSpace(PasswordInput) ? null : PasswordInput,
+                    Password = ArchivePassword,
                     SelectedEntries = selectedSet,
                     SmartFolderCreation = true
                 },
@@ -373,7 +378,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IsBusy = true;
         try
         {
-            string? pwd = string.IsNullOrWhiteSpace(PasswordInput) ? null : PasswordInput;
+            string? pwd = ArchivePassword;
             var result = await Task.Run(() => _backend.TestArchiveAsync(
                 CurrentArchivePath,
                 pwd,
@@ -461,6 +466,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _recoveredSessionPassword = null;
+        PasswordInput = string.Empty;
         _activeJob?.Cancel();
         _liveWatcher.OnTempFileModified -= HandleLiveFileEdited;
         _liveWatcher.Dispose();

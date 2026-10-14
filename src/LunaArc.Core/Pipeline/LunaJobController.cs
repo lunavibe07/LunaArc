@@ -23,6 +23,8 @@ public sealed class LunaJobController : IDisposable
 
     public void WaitIfPaused() => _pauseGate.Wait(_cts.Token);
 
+    public void WaitIfPaused(CancellationToken cancellationToken) => _pauseGate.Wait(cancellationToken);
+
     public void Dispose()
     {
         _pauseGate.Dispose();

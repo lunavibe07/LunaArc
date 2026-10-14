@@ -124,6 +124,16 @@ public partial class MainWindow : Window
         await new ArchiveOptionsWindow(Vm).ShowDialog<bool>(this);
     }
 
+    private async void OnRecoverPasswordClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || Vm.IsBusy) return;
+        var dialog = new PasswordRecoveryWindow();
+        ((PasswordRecoveryViewModel)dialog.DataContext!).ArchivePath = Vm.CurrentArchivePath;
+        var result = await dialog.ShowDialog<RecoveredArchive?>(this);
+        if (result == null) return;
+        await Vm.OpenArchiveFileAsync(result.Path, result.Password);
+    }
+
     private async void OnInfoClicked(object? sender, RoutedEventArgs e)
     {
         if (Vm == null || !Vm.HasArchive) return;

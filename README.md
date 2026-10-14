@@ -27,6 +27,24 @@ Version 1.1 uses a light, classic desktop layout: menu bar, large toolbar icons,
 
 The interface lists archive contents; it is not a general system-drive file browser. Delete and Repair commands are not exposed because the backend does not implement archive editing/repair. Both installed and portable Windows editions have this same interface. Toolbar artwork comes from Microsoft Fluent UI System Icons; its MIT notice is included in every published folder.
 
+## Password recovery and encrypted vault
+
+Version 1.2 adds **Tools > Recover password...**, available even when a protected archive cannot be opened.
+
+1. Browse to the ZIP, RAR, 7z or LARC archive.
+2. Choose **Password list / unlocked vault** and enter one password per line, or choose **Mask pattern**.
+3. In a mask, `?` means a digit (0-9), `#` means a lowercase ASCII letter (a-z), and other characters are literal. Backslash escapes the next character: `Luna202?` tries ten candidates; `Luna\?` tries the literal password `Luna?`.
+4. Select **Start**. The dialog shows attempts and average speed, with **Pause / Resume** and **Cancel**. Pause stops new attempts; attempts already running may finish. A maximum of two workers process candidates without allocating the whole mask space.
+5. A verified match enables **Open archive**. The password is hidden until **Show** is selected and is retained only for this archive session, including testing, extraction and preview. It does not populate the new-archive compression password.
+
+Search is limited to 1,000,000 candidates and verification to 10,000 catalog entries / 256 MiB of declared uncompressed output. These metadata limits are not comprehensive archive-bomb protection. Recovery can be slow because each candidate is checked against archive contents; LARC integrity testing uses disposable temporary extraction files. No candidate match can also mean damaged data. Recovery is not a general encryption bypass, does not guarantee a result, and currently has no GPU acceleration or saved search checkpoints.
+
+To use the vault, enter a master password and select **Save list** to save the current list, or **Load vault** to replace the list with saved candidates. Select **Start** to try the unlocked list. Vault operations clear the master-password input afterwards; closing the dialog clears the candidate and recovered-password fields. Managed strings cannot be guaranteed to disappear immediately from process memory.
+
+The vault is stored at `ApplicationData/LunaArc/password_vault.enc`, using a versioned AES-256-GCM envelope, a fresh salt/nonce for every save, a 16-byte authentication tag and PBKDF2-SHA256 with 600,000 iterations. A wrong master password or altered data fails authentication. Saving an existing vault first verifies its master password and uses a temporary file plus replacement to preserve the original on failure. Linux files are created with owner-only read/write permissions. There is no master-password recovery. Any old `password_vault.json` is left untouched and is not read automatically.
+
+The archive format remains compatible: no eight-byte password-check tag has been inserted into existing LARC headers. A quick password verifier cannot replace integrity validation. ZIP AES AE-2 has no payload CRC; LunaArc now validates its authentication code before testing or extracting. The additional encrypted ZIP validation currently rejects ZIP64 and split ZIP. See the [WinZip AES specification](https://www.winzip.com/en/support/aes-encryption/) and [.NET AES-GCM documentation](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.aesgcm?view=net-8.0).
+
 ## Requirements
 
 - .NET 8 SDK, version 8.0.400 or later in the 8.0 SDK family; `global.json` selects the latest installed compatible feature band.

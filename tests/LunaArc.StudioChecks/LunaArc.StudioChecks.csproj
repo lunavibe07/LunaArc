@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../LunaArc.SmokeTests/Fixtures/**/*" Link="Fixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../src/LunaArc.Studio/LunaArc.Studio.csproj" />
     <PackageReference Include="Avalonia.Headless" Version="11.1.3" />
   </ItemGroup>

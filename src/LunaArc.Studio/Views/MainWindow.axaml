@@ -48,6 +48,7 @@
                     <MenuItem Header="Archive _information" Click="OnInfoClicked" IsEnabled="{Binding HasArchive}" />
                 </MenuItem>
                 <MenuItem Header="_Tools">
+                    <MenuItem Name="RecoverPasswordMenu" Header="_Recover password..." Click="OnRecoverPasswordClicked" />
                     <MenuItem Header="Install Explorer context _menu" Command="{Binding RegisterOsShellMenuCommand}" />
                 </MenuItem>
                 <MenuItem Header="_Options">

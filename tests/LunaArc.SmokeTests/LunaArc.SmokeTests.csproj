@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <None Update="Fixtures/**/*" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../src/LunaArc.Core/LunaArc.Core.csproj" />
     <ProjectReference Include="../../src/LunaArc.Shell/LunaArc.Shell.csproj" />
   </ItemGroup>

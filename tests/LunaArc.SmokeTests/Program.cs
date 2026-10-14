@@ -57,6 +57,11 @@ try
         {
             await ExpectFailure(() => backend.ReadCatalogAsync(archive, "wrong-password"), "Wrong password is rejected");
             Check(!(await backend.TestArchiveAsync(archive, "wrong-password", job)).IsHealthy, "Wrong password fails archive test");
+            Check(!await PasswordRecovery.VerifyArchiveAsync(backend, archive, null, default), "Locked catalog needs a password");
+            var recovered = await PasswordRecovery.SearchAsync(new[] { "incorrect", password }, 2,
+                (candidate, ct) => PasswordRecovery.VerifyArchiveAsync(backend, archive, candidate, ct), job);
+            Check(recovered.Verified && recovered.Password == password, "LARC list recovery verifies decrypted contents");
+            Check(!await PasswordRecovery.VerifyArchiveAsync(backend, archive, "incorrect", default), "Recovery rejects an incorrect password");
         }
         if (format == OutputArchiveFormat.Zip)
         {
@@ -71,6 +76,116 @@ try
     }
 
     string target = Path.Combine(root, "safe");
+    foreach (string name in new[] { "encrypted.zip", "encrypted-aes.zip", "encrypted.7z" })
+    {
+        string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
+        Check(!await PasswordRecovery.VerifyArchiveAsync(backend, fixture, null, default), name + ": cannot unlock without a password");
+        Check(!await PasswordRecovery.VerifyArchiveAsync(backend, fixture, "wrong-password", default), name + ": wrong password rejected");
+        Check(await PasswordRecovery.VerifyArchiveAsync(backend, fixture, "fixture3", default), name + ": correct password verifies content");
+        using var recoveryJob = new LunaJobController();
+        var result = await PasswordRecovery.SearchAsync(PasswordRecovery.EnumerateMask("fixture?"), 10,
+            (candidate, ct) => PasswordRecovery.VerifyArchiveAsync(backend, fixture, candidate, ct), recoveryJob);
+        Check(result.Verified && result.Password == "fixture3", name + ": bounded mask recovery");
+        string encryptedDestination = Path.Combine(root, "encrypted-output-" + name.Replace('.', '-'));
+        await backend.ExtractAsync(fixture, new ExtractOptions { DestinationDirectory = encryptedDestination, Password = "fixture3" }, recoveryJob);
+        Check(File.ReadAllText(Path.Combine(encryptedDestination, "message.txt")).TrimEnd() == "Synthetic LunaArc recovery fixture.", name + ": recovered password extracts original data");
+    }
+    string emptySource = Path.Combine(root, "empty-source");
+    foreach (string name in new[] { "Rar.encrypted_filesOnly.rar", "Rar.encrypted_filesAndHeader.rar", "Rar5.encrypted_filesOnly.rar", "Rar5.encrypted_filesAndHeader.rar" })
+    {
+        string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
+        Check(!await PasswordRecovery.VerifyArchiveAsync(backend, fixture, null, default), name + ": cannot unlock without a password");
+        Check(!await PasswordRecovery.VerifyArchiveAsync(backend, fixture, "wrong-password", default), name + ": wrong password rejected");
+        Check(await PasswordRecovery.VerifyArchiveAsync(backend, fixture, "test", default), name + ": correct password verifies content");
+        using var recoveryJob = new LunaJobController();
+        var result = await PasswordRecovery.SearchAsync(new[] { "incorrect", "test" }, 2,
+            (candidate, ct) => PasswordRecovery.VerifyArchiveAsync(backend, fixture, candidate, ct), recoveryJob);
+        Check(result.Verified && result.Password == "test", name + ": vault-list recovery");
+    }
+    Directory.CreateDirectory(emptySource);
+    using (var emptyJob = new LunaJobController())
+    {
+        string emptyArchive = Path.Combine(root, "empty-encrypted.larc");
+        await backend.CompressAsync(new[] { emptySource }, new CompressOptions
+        { OutputArchivePath = emptyArchive, Format = OutputArchiveFormat.LarcNative, Password = "empty-fixture" }, emptyJob);
+        Check(await PasswordRecovery.VerifyArchiveAsync(backend, emptyArchive, "empty-fixture", default), "Encrypted empty LARC is verified from the header flag");
+        string storedArchive = Path.Combine(root, "stored-unencrypted.larc");
+        await backend.CompressAsync(new[] { source }, new CompressOptions
+        { OutputArchivePath = storedArchive, Format = OutputArchiveFormat.LarcNative, Level = LunaCompressionLevel.Store }, emptyJob);
+        Check(await PasswordRecovery.VerifyArchiveAsync(backend, storedArchive, null, default), "Store-mode flag is not interpreted as encryption");
+    }
+    string damagedAes = Path.Combine(root, "damaged-aes.zip");
+    byte[] aesBytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "encrypted-aes.zip"));
+    int centralOffset = aesBytes.AsSpan().IndexOf(new byte[] { 0x50, 0x4b, 0x01, 0x02 });
+    Check(centralOffset > 10, "AES ZIP authentication fixture located");
+    aesBytes[centralOffset - 1] ^= 1;
+    File.WriteAllBytes(damagedAes, aesBytes);
+    Check(!await PasswordRecovery.VerifyArchiveAsync(backend, damagedAes, "fixture3", default), "Recovery rejects a damaged AES authentication tag");
+    string damagedOutput = Path.Combine(root, "damaged-aes-output");
+    Directory.CreateDirectory(damagedOutput);
+    File.WriteAllText(Path.Combine(damagedOutput, "message.txt"), "Existing file");
+    using (var damagedJob = new LunaJobController())
+        await ExpectFailure(() => backend.ExtractAsync(damagedAes, new ExtractOptions
+        { DestinationDirectory = damagedOutput, Password = "fixture3", OverwriteMode = OverwriteMode.OverwriteAll }, damagedJob), "AES authentication failure prevents extraction");
+    Check(File.ReadAllText(Path.Combine(damagedOutput, "message.txt")) == "Existing file", "AES authentication failure preserves original destination");
+    string ae1Archive = Path.Combine(root, "aes-ae1.zip");
+    byte[] ae1Bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "encrypted-aes.zip"));
+    byte[] aesExtraMarker = new byte[] { 0x01, 0x99, 0x07, 0x00, 0x02, 0x00, 0x41, 0x45 };
+    for (int offset = 0; offset <= ae1Bytes.Length - aesExtraMarker.Length; offset++)
+        if (ae1Bytes.AsSpan(offset, aesExtraMarker.Length).SequenceEqual(aesExtraMarker)) ae1Bytes[offset + 4] = 1;
+    uint ae1Crc = Crc32Verifier.Compute("Synthetic LunaArc recovery fixture.\r\n"u8);
+    System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(ae1Bytes.AsSpan(14, 4), ae1Crc);
+    System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(ae1Bytes.AsSpan(centralOffset + 16, 4), ae1Crc);
+    File.WriteAllBytes(ae1Archive, ae1Bytes);
+    Check(await PasswordRecovery.VerifyArchiveAsync(backend, ae1Archive, "fixture3", default), "AES AE-1 validates both authentication and CRC");
+    ae1Bytes[centralOffset + 16] ^= 1;
+    File.WriteAllBytes(ae1Archive, ae1Bytes);
+    Check(!await PasswordRecovery.VerifyArchiveAsync(backend, ae1Archive, "fixture3", default), "AES AE-1 does not skip CRC verification");
+    Check(PasswordRecovery.CountMask("x?#") == 260, "Mask candidate count");
+    Check(PasswordRecovery.EnumerateMask("x?").SequenceEqual(Enumerable.Range(0, 10).Select(i => "x" + i)), "Lazy mask enumeration");
+    Check(PasswordRecovery.EnumerateMask(@"x\?\#").Single() == "x?#", "Literal mask escape");
+    await ExpectFailure(() => Task.FromResult(PasswordRecovery.CountMask("########")), "Mask limit rejects exponential allocation");
+    using (var recoveryJob = new LunaJobController())
+    {
+        var recovered = await PasswordRecovery.SearchAsync(PasswordRecovery.EnumerateMask("x?"), 10,
+            (candidate, _) => Task.FromResult(candidate == "x3"), recoveryJob);
+        Check(recovered.Verified && recovered.Password == "x3", "Mask recovery stops on a verified match");
+        var exhausted = await PasswordRecovery.SearchAsync(new[] { "a", "b" }, 2,
+            (_, _) => Task.FromResult(false), recoveryJob);
+        Check(!exhausted.Verified && exhausted.Password == null, "Search exhaustion is distinct from success");
+    }
+    using (var pausedJob = new LunaJobController())
+    {
+        pausedJob.Pause();
+        int calls = 0;
+        Task<RecoveryResult> paused = Task.Run(() => PasswordRecovery.SearchAsync(new[] { "a" }, 1,
+            (_, _) => { Interlocked.Increment(ref calls); return Task.FromResult(false); }, pausedJob));
+        await Task.Delay(50);
+        Check(calls == 0 && !paused.IsCompleted, "Paused recovery does not verify candidates");
+        pausedJob.Cancel();
+        await ExpectFailure(async () => await paused, "Cancelling paused recovery releases workers");
+    }
+    using (var cancelledJob = new LunaJobController())
+    {
+        cancelledJob.Cancel();
+        await ExpectFailure(async () => await PasswordRecovery.SearchAsync(new[] { "a" }, 1,
+            (_, _) => Task.FromResult(true), cancelledJob), "Cancellation is not reported as recovery failure");
+    }
+    var vault = new PasswordVault(Path.Combine(root, "vault.enc"));
+    vault.Save(new[] { "synthetic-vault-secret", " leading space ", "synthetic-vault-secret" }, "synthetic-master");
+    Check(vault.Load("synthetic-master").SequenceEqual(new[] { "synthetic-vault-secret", " leading space " }), "Authenticated vault round trip and deduplication");
+    byte[] originalVault = File.ReadAllBytes(Path.Combine(root, "vault.enc"));
+    Check(!System.Text.Encoding.UTF8.GetString(originalVault).Contains("synthetic-vault-secret"), "Vault contains no plaintext password");
+    await ExpectFailure(() => Task.FromResult(vault.Load("wrong-master")), "Wrong vault master is rejected");
+    await ExpectFailure(() => { vault.Save(new[] { "replacement" }, "wrong-master"); return Task.CompletedTask; }, "Wrong master cannot replace existing vault");
+    Check(File.ReadAllBytes(Path.Combine(root, "vault.enc")).SequenceEqual(originalVault), "Failed vault save preserves original data");
+    byte[] tamperedVault = originalVault.ToArray();
+    tamperedVault[^1] ^= 1;
+    File.WriteAllBytes(Path.Combine(root, "vault.enc"), tamperedVault);
+    await ExpectFailure(() => Task.FromResult(vault.Load("synthetic-master")), "Tampered vault is rejected");
+    File.WriteAllBytes(Path.Combine(root, "vault.enc"), originalVault[..20]);
+    await ExpectFailure(() => Task.FromResult(vault.Load("synthetic-master")), "Truncated vault is rejected");
+    Check(Directory.GetFiles(root, "*.tmp").Length == 0, "Vault does not leave temporary files");
     foreach (string unsafePath in new[] { "../escape", "a/../../escape", "/absolute", "C:\\escape", "\\\\server\\share\\escape" })
         await ExpectFailure(() => Task.FromResult(ZipSlipGuard.ValidateAndResolvePath(target, unsafePath)), $"Reject unsafe path: {unsafePath}");
     Check(ZipSlipGuard.ValidateAndResolvePath(target, "nested/file.txt") == Path.Combine(target, "nested", "file.txt"), "Safe extraction path");

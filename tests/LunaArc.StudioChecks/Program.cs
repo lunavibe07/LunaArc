@@ -85,6 +85,57 @@ internal static class Program
             Click(options.FindControl<Button>("CancelOptionsButton")!);
             Check(vm.SelectedLevelIndex == originalLevel, "Cancel restores compression settings");
 
+            window.FindControl<MenuItem>("RecoverPasswordMenu")!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var recovery = (PasswordRecoveryWindow)window.OwnedWindows.Single();
+            var recoveryVm = (PasswordRecoveryViewModel)recovery.DataContext!;
+            Check(recoveryVm.ArchivePath == archivePath, "Recovery menu opens a real dialog with the archive path");
+            Check(recovery.FindControl<TextBox>("VaultMasterPassword")!.PasswordChar != '\0', "Vault master password is masked");
+            Capture(recovery, "recovery.png");
+            recoveryVm.CandidateText = "synthetic-password";
+            Pump(recoveryVm.StartAsync());
+            Check(recoveryVm.CanOpen && recoveryVm.RecoveredPassword.Length == 0, "Unencrypted archive is verified without guessing");
+            recoveryVm.ArchivePath = Path.Combine(temporary, "missing.zip");
+            Check(!recoveryVm.CanOpen, "Changing archive invalidates the previous recovery result");
+            Pump(recoveryVm.StartAsync());
+            Check(!recoveryVm.IsBusy && !recoveryVm.CanOpen, "Recovery errors restore idle state");
+            Click(recovery.FindControl<Button>("CloseRecoveryButton")!);
+            Check(recoveryVm.CandidateText.Length == 0 && recoveryVm.MasterPassword.Length == 0, "Closing recovery clears secret fields");
+            var vaultVm = new PasswordRecoveryViewModel(new LunaArc.Core.Security.PasswordVault(Path.Combine(temporary, "ui-vault.enc")))
+            { CandidateText = "synthetic-ui-vault-password", MasterPassword = "synthetic-ui-master" };
+            Pump(vaultVm.SaveVaultAsync());
+            Check(!vaultVm.IsBusy && vaultVm.MasterPassword.Length == 0 && File.Exists(Path.Combine(temporary, "ui-vault.enc")), "Vault save encrypts data and clears master input");
+            vaultVm.CandidateText = string.Empty;
+            vaultVm.MasterPassword = "incorrect-master";
+            Pump(vaultVm.LoadVaultAsync());
+            Check(vaultVm.CandidateText.Length == 0 && vaultVm.Status.Contains("could not be unlocked"), "Wrong master does not populate candidate fields");
+            vaultVm.MasterPassword = "synthetic-ui-master";
+            Pump(vaultVm.LoadVaultAsync());
+            Check(vaultVm.CandidateText == "synthetic-ui-vault-password" && vaultVm.MasterPassword.Length == 0, "Unlocked vault supplies the candidate list");
+            vaultVm.ClearSecrets();
+
+            window.FindControl<MenuItem>("RecoverPasswordMenu")!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var encryptedRecovery = (PasswordRecoveryWindow)window.OwnedWindows.Single();
+            var encryptedRecoveryVm = (PasswordRecoveryViewModel)encryptedRecovery.DataContext!;
+            encryptedRecoveryVm.ArchivePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "encrypted.zip");
+            encryptedRecoveryVm.ModeIndex = 1;
+            encryptedRecoveryVm.Mask = "fixture?";
+            Pump(encryptedRecoveryVm.StartAsync());
+            Check(encryptedRecoveryVm.CanOpen && encryptedRecoveryVm.RecoveredPassword == "fixture3", "Rendered recovery flow finds a real encrypted ZIP password");
+            Check(encryptedRecovery.FindControl<TextBox>("RecoveredPasswordBox")!.PasswordChar != '\0', "Recovered password hidden by default");
+            encryptedRecovery.FindControl<CheckBox>("ShowRecoveredPassword")!.IsChecked = true;
+            Check(encryptedRecovery.FindControl<TextBox>("RecoveredPasswordBox")!.PasswordChar == '\0', "Show checkbox reveals the verified password");
+            encryptedRecovery.FindControl<CheckBox>("ShowRecoveredPassword")!.IsChecked = false;
+            Capture(encryptedRecovery, "recovery-found.png");
+            Click(encryptedRecovery.FindControl<Button>("OpenRecoveredArchiveButton")!);
+            while (vm.IsBusy) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(1); }
+            Check(vm.HasArchive && vm.CurrentArchivePath.EndsWith("encrypted.zip"), "Open archive returns the recovered password to the main view");
+            Pump(vm.TestCurrentArchiveAsync());
+            Check(vm.StatusMessage.Contains("Archive test passed") && vm.PasswordInput.Length == 0, "Recovered session password is used for testing without changing compression settings");
+            Pump(vm.ExtractCurrentArchiveToAsync(Path.Combine(temporary, "recovered-output")));
+            Check(Directory.GetFiles(Path.Combine(temporary, "recovered-output"), "message.txt", SearchOption.AllDirectories).Length == 1, "Recovered session password is used for extraction");
+
             var compactVm = new MainWindowViewModel();
             var compact = new MainWindow { DataContext = compactVm, Width = 720, Height = 440 };
             try
