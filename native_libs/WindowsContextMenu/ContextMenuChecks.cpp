@@ -28,8 +28,11 @@ int wmain(int argc, wchar_t** argv) {
     GetTempPathW(ARRAYSIZE(temp), temp);
     auto directory = std::filesystem::path(temp) / (L"LunaArc-Menu-" + std::to_wstring(GetCurrentProcessId()));
     HMODULE library = nullptr;
+    bool created = false;
     try {
-        std::filesystem::create_directory(directory);
+        if (std::filesystem::exists(directory)) throw std::runtime_error("Test directory already exists; refusing reuse");
+        created = std::filesystem::create_directory(directory);
+        if (!created) throw std::runtime_error("Could not create test directory");
         std::ofstream(directory / L"Sample archive.zip") << "Synthetic shell selection; not an archive.";
         std::ofstream(directory / L"notes.txt") << "Synthetic file.";
         library = LoadLibraryW(argv[1]);
@@ -92,7 +95,9 @@ int wmain(int argc, wchar_t** argv) {
         Check(FolderName(L"C:\\release.TAR.GZ") == L"release", "Compound extension handled");
         Check(IsArchive(L"C:\\archive.RAR") && !IsArchive(L"C:\\notes.txt"), "Archive extension filtering");
         FreeLibrary(library); library = nullptr;
+        Check(std::filesystem::weakly_canonical(directory).parent_path() == std::filesystem::weakly_canonical(temp), "Cleanup stays inside the OS temp directory");
         std::filesystem::remove_all(directory);
+        created = false;
         CoUninitialize();
         std::cout << "PASS: " << checks << " native Explorer command checks (no Explorer registration or app launches)." << std::endl;
         return 0;
@@ -100,7 +105,8 @@ int wmain(int argc, wchar_t** argv) {
         std::cerr << "FAIL: " << error.what() << std::endl;
         if (library) FreeLibrary(library);
         // The temporary directory is constructed from the OS temp directory and current process ID.
-        std::filesystem::remove_all(directory);
+        if (created && std::filesystem::weakly_canonical(directory).parent_path() == std::filesystem::weakly_canonical(temp))
+            std::filesystem::remove_all(directory);
         CoUninitialize();
         return 1;
     }

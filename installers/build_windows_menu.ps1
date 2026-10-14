@@ -79,6 +79,8 @@ try {
     foreach ($file in @('RegisterWindows11Menu.ps1','InstallWindows11Menu.cmd')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $OutputDirectory
     }
+    & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $OutputDirectory 'RegisterWindows11Menu.ps1') -VerifyOnly
+    if ($LASTEXITCODE -ne 0) { throw 'Signed menu payload verification failed.' }
     Write-Output 'Native checks passed; Windows 11 menu preview packaged. No certificate trust or Explorer registration was changed.'
 } finally {
     if ($temporaryCertificate -and $certificate) { Remove-Item -LiteralPath ('Cert:/CurrentUser/My/' + $certificate.Thumbprint) -Force }

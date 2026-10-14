@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Unregister, [switch]$TrustCertificate, [string]$InstallationDirectory = $PSScriptRoot)
+param([switch]$Unregister, [switch]$TrustCertificate, [switch]$VerifyOnly, [string]$InstallationDirectory = $PSScriptRoot)
 $ErrorActionPreference = 'Stop'
 $packageName = 'LunaArc.ShellMenu'
 $directory = [IO.Path]::GetFullPath($InstallationDirectory).TrimEnd('\')
@@ -19,7 +19,7 @@ try {
         Write-Output 'Removed the modern menu owned by this folder. Certificate trust is left unchanged.'
         exit 0
     }
-    if ([Environment]::OSVersion.Version.Build -lt 22000) { throw 'The modern menu requires Windows 11. The classic LunaArc submenu remains available.' }
+    if (-not $VerifyOnly -and [Environment]::OSVersion.Version.Build -lt 22000) { throw 'The modern menu requires Windows 11. Use the classic LunaArc submenu instead.' }
     foreach ($file in @('LunaArc.exe','LunaArc.ContextMenu.dll','LunaArc.ShellMenu.msix','LunaArc.Menu.cer')) {
         if (-not (Test-Path -LiteralPath (Join-Path $directory $file))) { throw "Missing $file. Extract the entire portable package." }
     }
@@ -48,6 +48,7 @@ try {
     } finally { $zip.Dispose() }
     $dllSignature = Get-AuthenticodeSignature -LiteralPath (Join-Path $directory 'LunaArc.ContextMenu.dll')
     if ($dllSignature.Status -notin @('Valid','NotTrusted') -or $dllSignature.SignerCertificate.Thumbprint -ne $certificate.Thumbprint) { throw 'The native menu DLL signature did not validate.' }
+    if ($VerifyOnly) { Write-Output 'PASS: MSIX signer, identity and native DLL signature verified without installing certificate trust or registering Explorer.'; exit 0 }
     if (-not (Test-Path -LiteralPath ('Cert:/CurrentUser/TrustedPeople/' + $certificate.Thumbprint))) {
         if (-not $TrustCertificate) {
             Write-Host "Publisher: $($certificate.Subject)"
