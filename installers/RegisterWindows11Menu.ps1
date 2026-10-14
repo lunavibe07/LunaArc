@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Unregister, [switch]$TrustCertificate, [switch]$VerifyOnly, [string]$InstallationDirectory = '')
+param([switch]$Unregister, [switch]$TrustCertificate, [switch]$VerifyOnly, [switch]$ImportCertificateOnly, [string]$InstallationDirectory = '')
 $ErrorActionPreference = 'Stop'
 # Start-Process from PowerShell 7 can inherit incompatible PowerShell 7 modules.
 # Resolve only the built-in Windows PowerShell modules for certificate/Appx operations.
@@ -78,15 +78,35 @@ try {
         if ($dllCertificate.GetCertHashString() -ne $certificate.Thumbprint) { throw 'Native DLL and package signers differ.' }
     } finally { $dllCertificate.Dispose() }
     if ($VerifyOnly) { Write-Output 'PASS: package signer/identity and native DLL hash/signer pins checked without installing trust or registering Explorer.'; exit 0 }
-    if (-not (Test-Path -LiteralPath ('Cert:/CurrentUser/TrustedPeople/' + $certificate.Thumbprint))) {
+    $trustPath = 'Cert:/LocalMachine/TrustedPeople/' + $certificate.Thumbprint
+    $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    $isAdministrator = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if ($ImportCertificateOnly) {
+        if (-not $TrustCertificate -or -not $isAdministrator) { throw 'Certificate import requires explicit consent and administrator permission.' }
+        Import-Certificate -FilePath (Join-Path $directory 'LunaArc.Menu.cer') -CertStoreLocation 'Cert:/LocalMachine/TrustedPeople' | Out-Null
+        Write-Output 'Imported the approved menu certificate into Windows Trusted People. No package was registered by the elevated helper.'
+        exit 0
+    }
+    $chain = New-Object Security.Cryptography.X509Certificates.X509Chain
+    try { $alreadyTrusted = $chain.Build($certificate) }
+    finally { $chain.Dispose() }
+    if (-not $alreadyTrusted -and -not (Test-Path -LiteralPath $trustPath)) {
         if (-not $TrustCertificate) {
             Write-Host "Publisher: $($certificate.Subject)"
             Write-Host "Certificate: $($certificate.Thumbprint)"
             Write-Host 'This menu preview uses a signing certificate that Windows does not already trust.'
-            Write-Host 'Enabling it adds the certificate to Trusted People for your Windows account.'
+            Write-Host 'Enabling it adds this certificate to Windows Trusted People (all users).'
+            Write-Host 'Windows may ask for administrator permission for this certificate step only.'
             if ((Read-Host 'Trust this certificate and install the Windows 11 menu? Type YES to continue') -cne 'YES') { exit 2 }
         }
-        Import-Certificate -FilePath (Join-Path $directory 'LunaArc.Menu.cer') -CertStoreLocation 'Cert:/CurrentUser/TrustedPeople' | Out-Null
+        if ($isAdministrator) {
+            Import-Certificate -FilePath (Join-Path $directory 'LunaArc.Menu.cer') -CertStoreLocation 'Cert:/LocalMachine/TrustedPeople' | Out-Null
+        } else {
+            $helperArguments = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',
+                ('"' + $PSCommandPath + '"'),'-ImportCertificateOnly','-TrustCertificate','-InstallationDirectory',('"' + $directory + '"'))
+            $helper = Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList $helperArguments -Verb RunAs -WindowStyle Hidden -Wait -PassThru
+            if ($helper.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $trustPath)) { throw 'Certificate permission was declined or the import failed.' }
+        }
     }
     $previous = Get-AppxPackage -Name $packageName | Select-Object -First 1
     $backup = $null

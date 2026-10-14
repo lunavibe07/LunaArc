@@ -93,7 +93,7 @@ try {
     $certificatePath = Join-Path $portableDir 'LunaArc.Menu.cer'
     if (Test-Path -LiteralPath $certificatePath) {
         $testCertificate = New-Object Security.Cryptography.X509Certificates.X509Certificate2($certificatePath)
-        $trustPath = 'Cert:\CurrentUser\TrustedPeople\' + $testCertificate.Thumbprint
+        $trustPath = 'Cert:\LocalMachine\TrustedPeople\' + $testCertificate.Thumbprint
         if (Test-Path -LiteralPath $trustPath) { Remove-Item -LiteralPath $trustPath -Force }
         $testCertificate.Dispose()
     }

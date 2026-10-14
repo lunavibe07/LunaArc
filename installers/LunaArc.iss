@@ -39,7 +39,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "contextmenu"; Description: "Add LunaArc extraction and compression commands to Explorer"; GroupDescription: "Explorer integration:"
-Name: "modernmenu"; Description: "Windows 11 menu preview (trust the included menu signing certificate)"; GroupDescription: "Explorer integration:"; Flags: unchecked
+Name: "modernmenu"; Description: "Windows 11 menu preview (trust a test certificate for Windows; administrator permission may be required)"; GroupDescription: "Explorer integration:"; Flags: unchecked
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 
 [Files]
