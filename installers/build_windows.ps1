@@ -2,7 +2,8 @@
 param(
     [ValidateSet('win-x64', 'linux-x64')]
     [string]$Runtime = 'win-x64',
-    [string]$DotNet = 'dotnet'
+    [string]$DotNet = 'dotnet',
+    [switch]$SkipExplorerExtension
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,6 +35,9 @@ try {
     if ($Runtime.StartsWith('win-')) {
         foreach ($script in @('InstallContextMenu.cmd', 'UninstallContextMenu.cmd')) {
             Copy-Item -LiteralPath (Join-Path $projectRoot "installers/$script") -Destination $publishDir
+        }
+        if (-not $SkipExplorerExtension) {
+            & (Join-Path $PSScriptRoot 'build_windows_menu.ps1') -OutputDirectory $publishDir
         }
     }
     Write-Host "Publish succeeded: $publishDir" -ForegroundColor Green

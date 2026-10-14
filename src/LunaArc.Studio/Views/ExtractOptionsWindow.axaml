@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ x:Class="LunaArc.Studio.Views.ExtractOptionsWindow" Title="Extraction options - LunaArc"
+ Width="530" Height="290" CanResize="False" WindowStartupLocation="CenterOwner"
+ Background="#F5F5F5" FontFamily="Segoe UI,Inter" FontSize="12">
+ <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
+  <TextBlock Text="Destination folder" FontWeight="SemiBold"/>
+  <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,8,0,14">
+   <TextBox Name="DestinationBox"/>
+   <Button Name="BrowseDestinationButton" Grid.Column="1" Content="Browse..." Click="OnBrowse" Margin="8,0,0,0"/>
+  </Grid>
+  <TextBlock Grid.Row="2" Text="Archive password (if required)"/>
+  <TextBox Name="ExtractionPasswordBox" Grid.Row="3" PasswordChar="●" Margin="0,8,0,12"/>
+  <CheckBox Name="SkipExistingBox" Grid.Row="4" Content="Skip existing files" IsChecked="True"/>
+  <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+   <Button Name="StartExtractionButton" Content="Extract" IsDefault="True" Click="OnExtract"/>
+   <Button Name="CancelExtractionButton" Content="Cancel" IsCancel="True" Click="OnCancel"/>
+  </StackPanel>
+ </Grid>
+</Window>

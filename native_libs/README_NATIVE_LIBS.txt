@@ -1,5 +1,12 @@
 Optional native libraries
 
+Windows Explorer extension
+
+WindowsContextMenu contains LunaArc's native C++ IExplorerCommand implementation,
+CMake contract checks and sparse package manifest. Windows publishing builds this
+DLL independently from the managed archive backend. See README.md for optional
+Windows 11 registration and explicit certificate-trust requirements.
+
 LunaArc currently uses managed NuGet dependencies (SharpCompress and ZstdSharp.Port).
 No external 7-Zip DLL or shared library is required by the implemented archive backend.
 

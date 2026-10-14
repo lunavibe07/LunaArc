@@ -98,13 +98,17 @@ Cross-publishing Linux binaries on Windows verifies packaging, not Linux executi
 
 ## Windows right-click menus
 
-The ZIP is a portable application. Extract the entire `LunaArc-win-x64` artifact into a permanent folder, then double-click **InstallContextMenu.cmd** once. Alternatively, open LunaArc and click **Install Context Menu**. Registration is per-user and does not require administrator privileges.
+Extract the portable package into a permanent folder, then double-click **InstallContextMenu.cmd** once, or use **Tools > Install Explorer context menu** in LunaArc. Classic registration is per-user and preserves the default archive application.
 
-Right-click a supported archive to use **LunaArc: Open Archive**, **LunaArc: Extract Here**, or **LunaArc: Extract to Folder**. The last command always creates an archive-named destination, even if the archive already contains a root folder. Files and directories also have **Create .larc Archive** and **Create ZIP Archive** commands. Only one selected item is supported by these commands.
+Version 1.3 groups commands under **LunaArc**, with **Open with LunaArc**, **Extract files...**, **Extract to folder**, and **Extract Here** in that order. The modern menu names the destination dynamically, such as **Extract to "Sample archive\\"**. Other files and directories offer **Add to archive...** and **Add to ZIP archive...**. Only one selected filesystem item is supported; multi-selection and folder backgrounds are not supported.
 
-On **Windows 11**, choose **Show more options** to see these classic context-menu entries. This release does not implement the modern Windows 11 `IExplorerCommand` menu. See [Microsoft's File Explorer guide](https://support.microsoft.com/en-gb/windows/experience/fileexplorer/file-explorer-in-windows?nochrome=true).
+**Extract files...** opens a destination/password dialog. The other extraction actions open LunaArc with progress and use either the archive's parent directory or an archive-named folder; protected archives also open the password/options dialog. Existing files are skipped by default. Uncheck **Skip existing files** in the dialog only when replacement is intended. Compression commands open the existing creation-options and save dialogs.
 
-The menus work independently of the current default ZIP/RAR application. Installing them does not replace that application. Keep the published folder in place: the menu commands refer to those executables. Run **UninstallContextMenu.cmd** before deleting or moving the folder; after moving it, run installation again from the new location. You can also remove menus with `luna-cli unregister-shell`.
+The optional **Windows 11 menu preview** uses a native C++ `IExplorerCommand` DLL and a sparse identity package, following [Microsoft's Explorer extension model](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer). Enable it using **InstallWindows11Menu.cmd**, or select the additional Windows 11 menu task in Setup. Portable registration shows the signer and certificate thumbprint and asks for **YES** before adding trust. The Setup task explicitly opts into the same certificate trust.
+
+CI preview builds use a disposable self-signed test certificate; its public CER is included, and its private key is never distributed. Enabling this preview adds the certificate to **CurrentUser/TrustedPeople** and registers the sparse package for the current user. It does not install a root certificate or change Developer Mode. A production release should use a publisher certificate already trusted by Windows. If you decline certificate trust, the classic LunaArc submenu remains accessible through **Show more options**. See [Microsoft's signing guidance](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/grant-identity-to-nonpackaged-apps).
+
+Keep the folder in place while its menu is registered. **UninstallContextMenu.cmd** removes classic and modern registrations owned by this copy; run it before moving/deleting a portable folder. A newer registered copy is preserved when another installation is removed. Certificate trust is not automatically removed because another copy may still use it. Close/reopen Explorer windows or sign out if the shell has cached a prior registration; the scripts do not kill Explorer.
 
 ## Windows setup and portable editions
 
@@ -116,11 +120,13 @@ Both editions contain identical `LunaArc.exe` and `luna-cli.exe` binaries, so ar
 | `LunaArc-Windows-Portable` | `LunaArc-<version>-portable-win-x64.zip` | Extract the inner ZIP, run `LunaArc.exe`, optionally run `InstallContextMenu.cmd` |
 | `LunaArc-Windows-Checksums` | `SHA256SUMS.txt` | SHA-256 checksums for both packages |
 
-GitHub Actions wraps each downloaded artifact in a ZIP; extract it to find the setup EXE or portable ZIP listed above. The setup installs for the current user under `%LOCALAPPDATA%\Programs\LunaArc`, creates a Start menu shortcut and an Apps/Installed apps uninstall entry, and does not require administrator privileges. Explorer integration is selected by default and can be unchecked. It provides the same **Extract Here**, **Extract to Folder**, **Open Archive** and compression commands as the portable edition. Windows 11 still uses **Show more options**.
+GitHub Actions wraps each downloaded artifact in a ZIP; extract it to find the setup EXE or portable ZIP listed above. Setup installs per-user under `%LOCALAPPDATA%\Programs\LunaArc`, with Start menu and uninstall entries. The classic Explorer task is selected by default; the modern Windows 11 preview task is unchecked and explicitly describes certificate trust. Both editions ship the same GUI, CLI, native menu DLL, menu icon, sparse package, public certificate and registration scripts.
 
 Uninstall removes menus only if they currently point to that installation. If a portable copy has since registered its own menu, uninstalling the installed edition preserves the portable menu. The most recently registered copy owns the common LunaArc commands; the two copies do not create duplicate menus. User-created archives and personal application-data files are not removed by the installer.
 
-To build both Windows packages locally, install [Inno Setup 6.3 or later](https://jrsoftware.org/isdl.php), then run:
+Full Windows publishing also requires Visual Studio C++ x64 build tools, CMake/CTest and Windows SDK MakeAppx/SignTool. Set `LUNAARC_MENU_SIGNING_THUMBPRINT` to a certificate with a private key in CurrentUser/My for local menu signing. CI generates an ephemeral preview signer. Use `build_windows.ps1 -SkipExplorerExtension` for a managed-only local publish; it cannot produce the full setup/portable packages. Cross-publishing Windows from Linux also produces managed binaries without the native menu.
+
+To build both complete Windows packages locally, install these tools and [Inno Setup 6.3 or later](https://jrsoftware.org/isdl.php), then run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File installers/build_windows_packages.ps1
@@ -164,9 +170,9 @@ Shell registration is explicit and changes the current user's OS configuration. 
 The current Windows checkout was checked with .NET SDK 8.0.426:
 
 - Debug and Release solution builds passed with zero warnings and zero errors.
-- 122 backend/archive smoke checks passed on Windows, including list/mask password recovery, ZIP AES authentication and encrypted-vault failure cases.
-- 45 isolated Windows Registry checks verify context-menu registration/removal, executable quoting, existing default applications, other applications' entries and installation-scoped cleanup. They do not modify the real Explorer configuration. Full setup lifecycle verification runs in the Windows CI job.
-- 37 rendered Studio checks passed, including recovering a password, opening the archive, testing and extracting with its session secret, and vault operations.
+- 126 backend/archive smoke checks passed on Windows, including recovery, vault failures and Explorer command parsing.
+- 57 isolated Registry checks verify cascading groups, command order/quoting, default applications, other applications' entries and scoped cleanup without changing Explorer configuration.
+- 45 rendered Studio checks passed, including recovery, vault operations, extraction options, Extract Here/folder behavior, preservation of existing files and cancelling compression/extraction dialogs.
 - The version 1.2 `win-x64` self-contained publish succeeded and its CLI help ran successfully.
 - Native Linux build, backend checks, rendered UI checks and publish passed in CI for the recovery implementation commit `2f90420`. This Windows machine does not establish native Linux desktop behavior; OS file-picker dialogs and full desktop interaction remain outside the headless checks.
 

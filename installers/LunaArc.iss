@@ -39,6 +39,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "contextmenu"; Description: "Add LunaArc extraction and compression commands to Explorer"; GroupDescription: "Explorer integration:"
+Name: "modernmenu"; Description: "Windows 11 menu preview (trust the included menu signing certificate)"; GroupDescription: "Explorer integration:"; Flags: unchecked
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 
 [Files]
@@ -65,12 +66,20 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
 begin
   if CurStep = ssPostInstall then begin
     if WizardIsTaskSelected('contextmenu') then
       UpdateContextMenu('register-shell')
     else
       UpdateContextMenu('unregister-shell --if-path "' + ExpandConstant('{app}') + '"');
+    if WizardIsTaskSelected('modernmenu') then begin
+      if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+          '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\RegisterWindows11Menu.ps1') + '" -TrustCertificate',
+          ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
+        MsgBox('Windows could not enable the modern menu. The classic LunaArc submenu remains available. Run InstallWindows11Menu.cmd for details.', mbInformation, MB_OK);
+    end;
   end;
 end;
 

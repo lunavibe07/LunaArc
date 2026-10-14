@@ -12,7 +12,7 @@ $packageDir = Join-Path $projectRoot 'dist/packages'
 if (-not $SkipPublish) {
     & (Join-Path $PSScriptRoot 'build_windows.ps1') -Runtime win-x64 -DotNet $DotNet
 }
-foreach ($file in @('LunaArc.exe', 'luna-cli.exe', 'InstallContextMenu.cmd', 'UninstallContextMenu.cmd', 'README.md', 'EULA_License.txt')) {
+foreach ($file in @('LunaArc.exe', 'luna-cli.exe', 'InstallContextMenu.cmd', 'UninstallContextMenu.cmd', 'README.md', 'EULA_License.txt','LunaArc.ContextMenu.dll','LunaArc.Menu.ico','LunaArc.ShellMenu.msix','LunaArc.Menu.cer','RegisterWindows11Menu.ps1','InstallWindows11Menu.cmd')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishDir $file))) { throw "Missing published file: $file" }
 }
 [xml]$properties = Get-Content -LiteralPath (Join-Path $projectRoot 'Directory.Build.props') -Raw -Encoding UTF8

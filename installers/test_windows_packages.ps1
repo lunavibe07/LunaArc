@@ -15,14 +15,14 @@ $testBase = [System.IO.Path]::GetFullPath($env:RUNNER_TEMP)
 $testRoot = Join-Path $testBase ('LunaArc-Packages-' + [guid]::NewGuid().ToString('N'))
 $installDir = Join-Path $testRoot 'installed app'
 $portableDir = Join-Path $testRoot 'portable app'
-$menuKey = 'HKCU:\Software\Classes\SystemFileAssociations\.zip\shell\LunaArc_ExtractHere\command'
+$menuKey = 'HKCU:\Software\Classes\SystemFileAssociations\.zip\shell\LunaArc\shell\04Here\command'
 
 function Invoke-HiddenProgram([string]$File, [string[]]$Arguments) {
     $process = Start-Process -FilePath $File -ArgumentList $Arguments -WindowStyle Hidden -Wait -PassThru
     if ($process.ExitCode -ne 0) { throw "$File failed with exit code $($process.ExitCode)." }
 }
 function Assert-MenuOwner([string]$Directory) {
-    $expected = '"' + (Join-Path $Directory 'luna-cli.exe') + '" extract-here "%1"'
+    $expected = '"' + (Join-Path $Directory 'LunaArc.exe') + '" --shell-extract-here "%1"'
     $actual = (Get-Item -LiteralPath $menuKey).GetValue('')
     if ($actual -ne $expected) { throw "Unexpected context-menu command: $actual" }
 }
@@ -30,7 +30,7 @@ function Assert-MenuOwner([string]$Directory) {
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 try {
     Expand-Archive -LiteralPath $portable -DestinationPath $portableDir
-    foreach ($file in @('LunaArc.exe', 'luna-cli.exe', 'InstallContextMenu.cmd', 'UninstallContextMenu.cmd')) {
+    foreach ($file in @('LunaArc.exe', 'luna-cli.exe', 'InstallContextMenu.cmd', 'UninstallContextMenu.cmd', 'LunaArc.ContextMenu.dll','LunaArc.Menu.ico','LunaArc.ShellMenu.msix','LunaArc.Menu.cer','RegisterWindows11Menu.ps1','InstallWindows11Menu.cmd')) {
         if (-not (Test-Path -LiteralPath (Join-Path $portableDir $file))) { throw "Portable is missing $file" }
     }
     Invoke-HiddenProgram $setup @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/TASKS=contextmenu', "/DIR=`"$installDir`"")

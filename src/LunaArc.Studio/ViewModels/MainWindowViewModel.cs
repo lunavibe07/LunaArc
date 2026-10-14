@@ -66,6 +66,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool CanUseArchive => CanStartOperation && HasArchive;
     public bool CanViewSelection => CanUseArchive && SelectedItem != null;
     public bool CanGoUp => CanUseArchive && _currentParentIndex >= 0;
+    public bool HasEncryptedEntries => _currentArena != null &&
+        Enumerable.Range(0, _currentArena.Count).Any(i => _currentArena.GetNode(i).IsEncrypted);
 
     [ObservableProperty]
     private double _progressPercent = 0;
@@ -93,7 +95,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _liveWatcher.OnTempFileModified += HandleLiveFileEdited;
     }
 
-    public async Task OpenArchiveFileAsync(string archivePath, string? recoveredPassword = null)
+    public async Task<bool> OpenArchiveFileAsync(string archivePath, string? recoveredPassword = null)
     {
         try
         {
@@ -113,10 +115,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
             NavigateToFolder(-1);
             StatusMessage = $"✅ Loaded {_currentArena.Count:N0} entries in {sw.ElapsedMilliseconds} ms | Original size: {FormatSize(_currentArena.TotalUncompressedBytes)}";
+            return true;
         }
         catch (Exception ex)
         {
             StatusMessage = $"❌ Could not open archive: {ex.Message}";
+            return false;
         }
         finally
         {
@@ -257,7 +261,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    public async Task ExtractCurrentArchiveToAsync(string destinationFolder)
+    public async Task ExtractCurrentArchiveToAsync(string destinationFolder, bool skipExisting = false)
     {
         if (IsBusy) return;
         if (string.IsNullOrWhiteSpace(CurrentArchivePath) || !File.Exists(CurrentArchivePath))
@@ -283,7 +287,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     DestinationDirectory = destinationFolder,
                     Password = ArchivePassword,
                     SelectedEntries = selectedSet,
-                    SmartFolderCreation = true
+                    SmartFolderCreation = false,
+                    OverwriteMode = skipExisting ? OverwriteMode.SkipExisting : OverwriteMode.OverwriteAll
                 },
                 _activeJob,
                 (done, total, file) =>

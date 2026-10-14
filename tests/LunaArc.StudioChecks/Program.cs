@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using LunaArc.Studio;
 using LunaArc.Studio.ViewModels;
 using LunaArc.Studio.Views;
+using LunaArc.Shell;
 
 internal static class Program
 {
@@ -113,6 +114,37 @@ internal static class Program
             Pump(vaultVm.LoadVaultAsync());
             Check(vaultVm.CandidateText == "synthetic-ui-vault-password" && vaultVm.MasterPassword.Length == 0, "Unlocked vault supplies the candidate list");
             vaultVm.ClearSecrets();
+
+            Task extraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
+            Dispatcher.UIThread.RunJobs();
+            var extractionOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            Check(extractionOptions.FindControl<CheckBox>("SkipExistingBox")!.IsChecked == true, "Explorer extraction defaults to preserving existing files");
+            Check(extractionOptions.FindControl<TextBox>("ExtractionPasswordBox")!.PasswordChar != '\0', "Extraction password masked");
+            string chosenDestination = Path.Combine(temporary, "chosen extraction folder");
+            extractionOptions.FindControl<TextBox>("DestinationBox")!.Text = chosenDestination;
+            Capture(extractionOptions, "extract-options.png");
+            Click(extractionOptions.FindControl<Button>("StartExtractionButton")!);
+            Pump(extraction);
+            Check(File.Exists(Path.Combine(chosenDestination, "readme.md")), "Extract files command honors the chosen folder");
+            File.WriteAllText(Path.Combine(temporary, "notes.txt"), "Existing notes must survive");
+            Pump(window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.ExtractHere, archivePath)));
+            Check(File.ReadAllText(Path.Combine(temporary, "notes.txt")) == "Existing notes must survive", "Extract Here preserves existing files by default");
+            Check(File.Exists(Path.Combine(temporary, "project.json")), "Extract Here writes next to the archive");
+            Pump(window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.ExtractFolder, archivePath)));
+            Check(File.Exists(Path.Combine(temporary, "Sample archive", "readme.md")), "Extract to folder creates the archive-named destination");
+            Task cancelledExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
+            Dispatcher.UIThread.RunJobs();
+            var cancelledOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            cancelledOptions.FindControl<TextBox>("ExtractionPasswordBox")!.Text = "synthetic-cancelled-secret";
+            Click(cancelledOptions.FindControl<Button>("CancelExtractionButton")!);
+            Pump(cancelledExtraction);
+            Check(cancelledOptions.FindControl<TextBox>("ExtractionPasswordBox")!.Text == string.Empty && vm.StatusMessage == "Extraction cancelled.", "Cancelling extraction clears the password and does not start a job");
+            Task cancelledAdd = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.AddZip, Path.Combine(temporary, "notes.txt")));
+            Dispatcher.UIThread.RunJobs();
+            var shellAddOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
+            Check(vm.SelectedFormatIndex == 1, "Explorer ZIP creation selects ZIP before opening options");
+            Click(shellAddOptions.FindControl<Button>("CancelOptionsButton")!);
+            Pump(cancelledAdd);
 
             window.FindControl<MenuItem>("RecoverPasswordMenu")!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Dispatcher.UIThread.RunJobs();

@@ -14,5 +14,7 @@ if errorlevel 1 (
 echo.
 echo LunaArc context menus are installed for your Windows account.
 echo On Windows 11, right-click an archive and select Show more options.
+echo To enable the modern Windows 11 submenu, run InstallWindows11Menu.cmd.
+echo That optional preview asks before trusting its menu signing certificate.
 echo Keep this folder in place. Run UninstallContextMenu.cmd before moving or deleting it.
 pause

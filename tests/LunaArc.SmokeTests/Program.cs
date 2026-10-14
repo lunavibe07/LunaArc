@@ -76,6 +76,11 @@ try
     }
 
     string target = Path.Combine(root, "safe");
+    Check(LunaArc.Shell.ExplorerRequest.GetFolderName("release.TAR.GZ") == "release", "Explorer folder name handles compound extensions");
+    var shellRequest = LunaArc.Shell.ExplorerRequest.Parse(new[] { "--shell-extract-here", Path.Combine(root, "archive with spaces.zip") });
+    Check(shellRequest.Action == LunaArc.Shell.ExplorerAction.ExtractHere && shellRequest.ExtractionDirectory == root, "Explorer command parsing preserves paths with spaces");
+    await ExpectFailure(() => Task.FromResult(LunaArc.Shell.ExplorerRequest.Parse(new[] { "--shell-unknown", root })), "Unknown Explorer command rejected");
+    await ExpectFailure(() => Task.FromResult(LunaArc.Shell.ExplorerRequest.Parse(new[] { "--shell-open", root, "extra" })), "Explorer command rejects extra arguments");
     foreach (string name in new[] { "encrypted.zip", "encrypted-aes.zip", "encrypted.7z" })
     {
         string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);

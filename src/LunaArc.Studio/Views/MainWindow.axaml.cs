@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using LunaArc.Studio.ViewModels;
+using LunaArc.Shell;
 
 namespace LunaArc.Studio.Views;
 
@@ -15,6 +16,40 @@ public partial class MainWindow : Window
     }
 
     private MainWindowViewModel? Vm => DataContext as MainWindowViewModel;
+
+    public async Task HandleExplorerRequestAsync(ExplorerRequest request)
+    {
+        if (Vm == null || Vm.IsBusy) return;
+        try
+        {
+            if (request.Action is ExplorerAction.Add or ExplorerAction.AddZip)
+            {
+                if (!File.Exists(request.Path) && !Directory.Exists(request.Path)) throw new FileNotFoundException("The selected source no longer exists.");
+                Vm.SelectedFormatIndex = request.Action == ExplorerAction.AddZip ? 1 : 0;
+                if (!await new ArchiveOptionsWindow(Vm).ShowDialog<bool>(this)) return;
+                string extension = Vm.SelectedFormatIndex switch { 1 => "zip", 2 => "tar.gz", _ => "larc" };
+                var output = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                { Title = "Save new archive", DefaultExtension = extension, SuggestedFileName = ExplorerRequest.GetFolderName(request.Path) + "." + extension });
+                if (output?.TryGetLocalPath() is { } path) await Vm.CompressFilesToArchiveAsync(new[] { request.Path }, path);
+                return;
+            }
+            if (request.Action == ExplorerAction.Open) { await Vm.OpenArchiveFileAsync(request.Path); return; }
+            ExtractionChoice? choice = null;
+            if (request.Action == ExplorerAction.Extract)
+                choice = await new ExtractOptionsWindow(request.ExtractionDirectory).ShowDialog<ExtractionChoice?>(this);
+            else
+            {
+                await Vm.OpenArchiveFileAsync(request.Path);
+                if (Vm.CurrentArchivePath != request.Path || Vm.HasEncryptedEntries)
+                    choice = await new ExtractOptionsWindow(request.ExtractionDirectory).ShowDialog<ExtractionChoice?>(this);
+                else choice = new(request.ExtractionDirectory, string.Empty, true);
+            }
+            if (choice == null) { Vm.StatusMessage = "Extraction cancelled."; return; }
+            if (await Vm.OpenArchiveFileAsync(request.Path, choice.Password))
+                await Vm.ExtractCurrentArchiveToAsync(choice.Destination, choice.SkipExisting);
+        }
+        catch (Exception ex) { Vm.StatusMessage = "Explorer command failed: " + ex.Message; }
+    }
 
     private async void OnOpenArchiveClicked(object? sender, RoutedEventArgs e)
     {
