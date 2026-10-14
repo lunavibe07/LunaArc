@@ -1,6 +1,11 @@
 [CmdletBinding()]
 param([switch]$Unregister, [switch]$TrustCertificate, [switch]$VerifyOnly, [string]$InstallationDirectory = '')
 $ErrorActionPreference = 'Stop'
+# Start-Process from PowerShell 7 can inherit incompatible PowerShell 7 modules.
+# Resolve only the built-in Windows PowerShell modules for certificate/Appx operations.
+if ($PSVersionTable.PSEdition -eq 'Desktop') {
+    $env:PSModulePath = @((Join-Path $PSHOME 'Modules'), (Join-Path $env:ProgramFiles 'WindowsPowerShell/Modules')) -join ';'
+}
 $packageName = 'LunaArc.ShellMenu'
 if ([string]::IsNullOrWhiteSpace($InstallationDirectory)) { $InstallationDirectory = $PSScriptRoot }
 function Get-NormalizedDirectory([string]$Path) {
@@ -58,8 +63,11 @@ try {
         $hashReader = New-Object IO.StreamReader($hashStream)
         try { $expectedDllHash = $hashReader.ReadToEnd().Trim() }
         finally { $hashReader.Dispose(); $hashStream.Dispose() }
-        if ($expectedDllHash -notmatch '^[0-9a-fA-F]{64}$' -or
-            (Get-FileHash -LiteralPath (Join-Path $directory 'LunaArc.ContextMenu.dll') -Algorithm SHA256).Hash -ne $expectedDllHash) {
+        $dllStream = [IO.File]::OpenRead((Join-Path $directory 'LunaArc.ContextMenu.dll'))
+        $hashAlgorithm = [Security.Cryptography.SHA256]::Create()
+        try { $actualDllHash = [BitConverter]::ToString($hashAlgorithm.ComputeHash($dllStream)).Replace('-','') }
+        finally { $hashAlgorithm.Dispose(); $dllStream.Dispose() }
+        if ($expectedDllHash -notmatch '^[0-9a-fA-F]{64}$' -or $actualDllHash -ne $expectedDllHash) {
             throw 'The native menu DLL does not match the hash in its signed package.'
         }
     } finally { $zip.Dispose() }
