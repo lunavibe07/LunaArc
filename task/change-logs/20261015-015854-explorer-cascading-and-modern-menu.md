@@ -30,3 +30,15 @@ Match the supplied WinRAR-style Explorer submenu: app-attributed LunaArc group, 
 ## Limits
 
 Single filesystem selection only; no multi-selection or folder-background menu. Modern menu requires Windows 11 and explicit trust of the preview signer. Production distribution needs a trusted publisher certificate. Native COM checks and CI packaging are not a visual test of Windows 11 Explorer; no native Explorer screenshot has been claimed. Local tests do not import certificates or alter real Explorer registration.
+
+## Final CI verification and delivery
+
+Run https://github.com/lunavibe07/LunaArc/actions/runs/38628778048 succeeded on both Windows and Linux for implementation commit 3e4fbcc.
+
+- Native Windows and Linux Debug/Release builds, backend checks, rendered UI checks and self-contained publishes passed.
+- Windows native extension compiled cleanly and passed 61 direct COM contract checks; registered COM activation/title/submenu flags also passed in the package lifecycle checks.
+- Signed MSIX signer/identity and native DLL hash/signer pins passed verification. The preview package registered successfully with explicit machine Trusted People trust on the disposable CI runner.
+- Complete setup and portable packages built. Tests verified byte equality, classic/modern registration, equal-version external-folder transfer, effective ownership, removal of the installed copy while preserving the portable menu, and final package/menu cleanup. The CI trust certificate was removed afterwards.
+- Download artifacts: LunaArc-Windows-Setup, LunaArc-Windows-Portable and LunaArc-Windows-Checksums; UI preview artifacts and raw Windows/Linux publish folders are also available.
+
+This final update only records completed verification and does not change the shipped implementation. Native Explorer visual interaction and the non-admin UAC consent path remain untested locally.
