@@ -146,6 +146,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Name = _currentArena.GetName(idx),
                 FullRelativePath = _currentArena.GetFullPath(idx),
                 IsDirectory = node.IsDirectory,
+                IsEncrypted = node.IsEncrypted,
                 OriginalSizeBytes = node.UncompressedSize,
                 CompressedSizeBytes = node.CompressedSize,
                 OriginalSizeDisplay = node.IsDirectory ? string.Empty : FormatSize(node.UncompressedSize),
@@ -171,7 +172,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 VisibleItems.Add(row);
         int folders = VisibleItems.Count(row => row.IsDirectory);
         int files = VisibleItems.Count - folders;
-        VisibleSummary = HasArchive ? $"{folders:N0} folders, {files:N0} files | Archive size: {FormatSize(_currentArena!.TotalUncompressedBytes)}" : "No archive opened";
+        long visibleBytes = VisibleItems.Where(row => row.IsFile).Sum(row => row.OriginalSizeBytes);
+        VisibleSummary = HasArchive ? $"{folders:N0} folders, {files:N0} files | {FormatSize(visibleBytes)}" : "No archive opened";
     }
 
     [RelayCommand]

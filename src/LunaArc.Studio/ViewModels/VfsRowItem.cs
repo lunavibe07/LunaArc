@@ -8,8 +8,10 @@ public sealed class VfsRowItem
     public required string FullRelativePath { get; init; }
     public required bool IsDirectory { get; init; }
     public bool IsFile => !IsDirectory;
-    public string TypeDisplay => IsDirectory ? "File folder" :
-        string.IsNullOrEmpty(Path.GetExtension(Name)) ? "File" : Path.GetExtension(Name)[1..].ToUpperInvariant() + " file";
+    public bool IsEncrypted { get; init; }
+    public string TypeDisplay => (IsDirectory ? "File folder" :
+        string.IsNullOrEmpty(Path.GetExtension(Name)) ? "File" : Path.GetExtension(Name)[1..].ToUpperInvariant() + " file")
+        + (IsEncrypted ? " (encrypted)" : string.Empty);
     public long OriginalSizeBytes { get; init; }
     public long CompressedSizeBytes { get; init; }
     public required string OriginalSizeDisplay { get; init; }
