@@ -72,6 +72,28 @@ On **Windows 11**, choose **Show more options** to see these classic context-men
 
 The menus work independently of the current default ZIP/RAR application. Installing them does not replace that application. Keep the published folder in place: the menu commands refer to those executables. Run **UninstallContextMenu.cmd** before deleting or moving the folder; after moving it, run installation again from the new location. You can also remove menus with `luna-cli unregister-shell`.
 
+## Windows setup and portable editions
+
+Both editions contain identical `LunaArc.exe` and `luna-cli.exe` binaries, so archive formats and extraction/compression options are the same.
+
+| Download in GitHub Actions | File inside the artifact | How to use |
+| --- | --- | --- |
+| `LunaArc-Windows-Setup` | `LunaArc-<version>-setup-win-x64.exe` | Run the wizard; choose Explorer integration and an optional desktop shortcut |
+| `LunaArc-Windows-Portable` | `LunaArc-<version>-portable-win-x64.zip` | Extract the inner ZIP, run `LunaArc.exe`, optionally run `InstallContextMenu.cmd` |
+| `LunaArc-Windows-Checksums` | `SHA256SUMS.txt` | SHA-256 checksums for both packages |
+
+GitHub Actions wraps each downloaded artifact in a ZIP; extract it to find the setup EXE or portable ZIP listed above. The setup installs for the current user under `%LOCALAPPDATA%\Programs\LunaArc`, creates a Start menu shortcut and an Apps/Installed apps uninstall entry, and does not require administrator privileges. Explorer integration is selected by default and can be unchecked. It provides the same **Extract Here**, **Extract to Folder**, **Open Archive** and compression commands as the portable edition. Windows 11 still uses **Show more options**.
+
+Uninstall removes menus only if they currently point to that installation. If a portable copy has since registered its own menu, uninstalling the installed edition preserves the portable menu. The most recently registered copy owns the common LunaArc commands; the two copies do not create duplicate menus. User-created archives and personal application-data files are not removed by the installer.
+
+To build both Windows packages locally, install [Inno Setup 6.3 or later](https://jrsoftware.org/isdl.php), then run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File installers/build_windows_packages.ps1
+```
+
+Use `-SkipPublish` to package an existing `dist/win-x64` build, or `-Iscc "C:\path\to\ISCC.exe"` for a custom compiler location. Versioned packages and checksums are written to `dist/packages`. The Windows CI job compiles both packages and tests installation/removal, the optional Explorer task, equality of installed/portable binaries and menu ownership during coexistence. Installer lifecycle tests are restricted to the disposable CI runner and do not run against a developer's Windows profile.
+
 ## CLI usage
 
 ```text
@@ -109,7 +131,7 @@ The current Windows checkout was checked with .NET SDK 8.0.426:
 
 - Debug and Release solution builds passed with zero warnings and zero errors.
 - 63 backend/archive smoke checks passed on Windows.
-- 41 isolated Windows Registry checks verify context-menu registration/removal, executable quoting, existing default applications and other applications' menu entries. They do not modify the real Explorer configuration.
+- 45 isolated Windows Registry checks verify context-menu registration/removal, executable quoting, existing default applications, other applications' entries and installation-scoped cleanup. They do not modify the real Explorer configuration. Full setup lifecycle verification runs in the Windows CI job.
 - Both `win-x64` and `linux-x64` self-contained publishes succeeded.
 - 16 checks passed against the packaged Windows CLI; the packaged GUI remained running during a four-second startup check.
 - Linux output files were checked for ELF signatures. Native Linux execution, Bash-script execution and full desktop UI interactions were not verified locally because this machine has no Linux runtime or connected desktop automation.

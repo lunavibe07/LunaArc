@@ -40,6 +40,9 @@ internal static class WindowsShellChecks
             using (var legacy = classes.OpenSubKey(@"LunaArc.zip\shell\LunaArc_ExtractHere"))
                 Check(legacy == null, "Legacy duplicate extraction verb removed");
 
+            Check(!registrar.UnregisterIfOwnedBy(Path.Combine(temporaryDirectory, "other installation")), "Uninstall from another installation preserves active menus");
+            Check(Read(classes, @"SystemFileAssociations\.zip\shell\LunaArc_ExtractHere\command") != null, "Scoped cleanup leaves another installation's extraction verb intact");
+
             registrar.RegisterContextMenuAndAssociations(gui, cli);
             using (var verbs = classes.OpenSubKey(@"SystemFileAssociations\.zip\shell"))
                 Check(verbs!.GetSubKeyNames().Length == 4, "Repeated installation is idempotent and preserves other verbs");
@@ -60,6 +63,9 @@ internal static class WindowsShellChecks
             using (var legacyDefault = classes.CreateSubKey(".larc")) legacyDefault.SetValue("", "LunaArc.larc");
             registrar.UnregisterAll();
             Check(Read(classes, ".larc") == null, "Uninstall cleans dangling legacy default without deleting the extension");
+            registrar.RegisterContextMenuAndAssociations(gui, cli);
+            Check(registrar.UnregisterIfOwnedBy(executableDirectory), "Scoped cleanup removes menus owned by its installation");
+            Check(Read(classes, @"SystemFileAssociations\.zip\shell\LunaArc_ExtractHere\command") == null, "Owned scoped cleanup removes extraction menu");
             Console.WriteLine($"PASS: {checks} isolated Windows shell-registration checks (no Explorer configuration changed).");
             return checks;
         }

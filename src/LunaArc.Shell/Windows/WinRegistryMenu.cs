@@ -84,6 +84,56 @@ public sealed class WinRegistryMenu : IOsShellRegistrar
         NotifyExplorer();
     }
 
+    public bool UnregisterIfOwnedBy(string installationDirectory)
+    {
+        string directory = Path.GetFullPath(installationDirectory);
+        string cli = Path.Combine(directory, "luna-cli.exe");
+        string gui = Path.Combine(directory, "LunaArc.exe");
+        bool removed = false;
+        WithClasses(classes =>
+        {
+            foreach (string ext in SupportedExtensions)
+            {
+                string shell = $@"SystemFileAssociations\{ext}\shell";
+                removed |= RemoveOwnedVerb(classes, shell, "LunaArc_Open", $"\"{gui}\" \"%1\"");
+                removed |= RemoveOwnedVerb(classes, shell, "LunaArc_ExtractHere", $"\"{cli}\" extract-here \"%1\"");
+                removed |= RemoveOwnedVerb(classes, shell, "LunaArc_ExtractSub", $"\"{cli}\" extract-folder \"%1\"");
+                string progId = $"LunaArc{ext}";
+                if (CommandMatches(classes, $@"{progId}\shell\open", $"\"{gui}\" \"%1\""))
+                {
+                    using var extKey = classes.OpenSubKey(ext, writable: true);
+                    if (extKey?.GetValue("") is string value && value.Equals(progId, StringComparison.OrdinalIgnoreCase))
+                        extKey.DeleteValue("", false);
+                    using var openWith = extKey?.OpenSubKey("OpenWithProgids", writable: true);
+                    openWith?.DeleteValue(progId, false);
+                    classes.DeleteSubKeyTree(progId, false);
+                    removed = true;
+                }
+            }
+            foreach (string shell in new[] { @"*\shell", @"Directory\shell" })
+            {
+                removed |= RemoveOwnedVerb(classes, shell, "LunaArc_PackLarc", $"\"{cli}\" pack-larc \"%1\"");
+                removed |= RemoveOwnedVerb(classes, shell, "LunaArc_PackZip", $"\"{cli}\" pack-zip \"%1\"");
+            }
+        });
+        if (removed) NotifyExplorer();
+        return removed;
+    }
+
+    private static bool CommandMatches(RegistryKey classes, string verbPath, string expected)
+    {
+        using var command = classes.OpenSubKey(verbPath + @"\command");
+        return command?.GetValue("") is string value && value.Equals(expected, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool RemoveOwnedVerb(RegistryKey classes, string shell, string name, string expected)
+    {
+        string verbPath = $@"{shell}\{name}";
+        if (!CommandMatches(classes, verbPath, expected)) return false;
+        classes.DeleteSubKeyTree(verbPath, false);
+        return true;
+    }
+
     private static void WriteVerb(RegistryKey classes, string shell, string name, string label, string executable, string? command)
     {
         using var verb = classes.CreateSubKey($@"{shell}\{name}");

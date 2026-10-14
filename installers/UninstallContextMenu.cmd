@@ -5,7 +5,7 @@ if not exist "%~dp0luna-cli.exe" (
     pause
     exit /b 1
 )
-"%~dp0luna-cli.exe" unregister-shell
+"%~dp0luna-cli.exe" unregister-shell --if-path "%~dp0."
 if errorlevel 1 (
     echo Context menu removal failed.
     pause

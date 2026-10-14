@@ -16,7 +16,7 @@ Read relevant source before editing. Source and project files define current beh
 - `src/LunaArc.Cli`: executable `luna-cli`; depends on Core and Shell.
 - `src/LunaArc.Studio`: executable `LunaArc`; Avalonia views and CommunityToolkit.Mvvm ViewModels; depends on Core and Shell.
 - `tests/LunaArc.SmokeTests`: dependency-light integration checks using disposable synthetic fixtures.
-- `installers`: portable self-contained publish scripts, not full installer generators.
+- `installers`: self-contained publish scripts, versioned Windows portable ZIP/setup packaging, Inno Setup definition and CI-only installer lifecycle checks.
 - `branding`: logo and EULA; `native_libs`: optional-library notes, not an implemented native adapter.
 - `.github/workflows/build.yml`: native Windows/Linux verification and artifact publishing in CI.
 
@@ -34,6 +34,7 @@ Current dependencies: SharpCompress 0.50.5, ZstdSharp.Port 0.8.1, Avalonia 11.1.
 - AES-256-CBC and CRC32 do not provide authenticated encryption. Format/crypto changes require explicit compatibility decisions.
 - Shell registration modifies user configuration and does not guarantee a default-app change on modern Windows or Linux. Linux currently creates a launcher and Nautilus scripts, not Dolphin menus.
 - Windows classic context-menu verbs belong under per-extension `SystemFileAssociations`, independent of the default app. Preserve existing defaults and other applications' verbs. Package InstallContextMenu.cmd/UninstallContextMenu.cmd in Windows outputs and notify Explorer after registration changes. Windows 11 users must use Show more options; modern IExplorerCommand integration is not implemented.
+- Windows setup and portable editions must ship identical GUI/CLI binaries and provide the same archive options. Setup is per-user with an optional Explorer task. Scoped uninstall must preserve menus owned by another copy. Keep the installer AppId stable across upgrades. Do not recursively remove user data during uninstall.
 
 ## Workflow
 
@@ -88,6 +89,8 @@ Backend checks should include round trips and independent hashes/readers where r
 For UI changes, verify the affected rendered flow when a desktop is available. Process startup is not a full UI interaction test. For performance changes, record fixture size/count, hardware, time and memory measurements.
 
 Publish via `installers/build_windows.ps1` (PowerShell) or `installers/build_linux.sh` (Bash). Both support win-x64/linux-x64 targets. Check exit codes and executable artifacts, native-library packaging and trimming settings. Cross-publish success does not establish native Linux runtime success; CI results must be distinguished from a merely added workflow.
+
+Build Windows setup/portable packages via `installers/build_windows_packages.ps1`; Inno Setup 6.3+ is required. Use the product version in Directory.Build.props for output names and include checksums. Installer lifecycle testing (`test_windows_packages.ps1`) is CI-only because it writes the disposable runner's real per-user registration; local shell checks use an isolated test key.
 
 ## Artifacts, change logs and reports
 

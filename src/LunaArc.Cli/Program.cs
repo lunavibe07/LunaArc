@@ -29,11 +29,12 @@ public static class Program
         try
         {
             string[] archiveCommands = { "list", "l", "extract-here", "x", "extract-smart", "extract-folder", "pack-larc", "pack-zip", "test", "t" };
-            if (command is "register-shell" or "unregister-shell" && args.Length != 1)
+            bool scopedUnregister = command == "unregister-shell" && args.Length == 3 && args[1] == "--if-path";
+            if (command is "register-shell" or "unregister-shell" && args.Length != 1 && !scopedUnregister)
                 throw new ArgumentException($"Command '{command}' takes no arguments.");
             if (archiveCommands.Contains(command) && (args.Length < 2 || args[1].StartsWith('-')))
                 throw new ArgumentException($"Command '{command}' requires a file or directory path.");
-            for (int i = 2; i < args.Length; i += 2)
+            for (int i = 2; !scopedUnregister && i < args.Length; i += 2)
             {
                 if (args[i] is not ("-p" or "-o") || i + 1 >= args.Length)
                     throw new ArgumentException("Options must be -p <password> or -o <directory>.");
@@ -175,6 +176,13 @@ public static class Program
 
                 case "unregister-shell":
                 {
+                    if (scopedUnregister)
+                    {
+                        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Scoped menu cleanup is supported on Windows only.");
+                        bool removed = new LunaArc.Shell.Windows.WinRegistryMenu().UnregisterIfOwnedBy(args[2]);
+                        Console.WriteLine(removed ? "LunaArc shell integration removed." : "No context menus owned by this installation; other registrations preserved.");
+                        break;
+                    }
                     ShellRegistrarFactory.CreateForCurrentOs().UnregisterAll();
                     Console.WriteLine("LunaArc shell integration removed.");
                     break;
@@ -229,5 +237,6 @@ public static class Program
         Console.WriteLine("  luna-cli test <archive> [-p password]         : Test archive integrity");
         Console.WriteLine("  luna-cli register-shell                        : Register shell integration");
         Console.WriteLine("  luna-cli unregister-shell                      : Remove shell integration");
+        Console.WriteLine("  luna-cli unregister-shell --if-path <directory> : Remove Windows menus only when owned by that installation");
     }
 }

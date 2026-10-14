@@ -46,6 +46,34 @@ jobs:
       - name: Published CLI on Linux
         if: runner.os == 'Linux'
         run: ./dist/linux-x64/luna-cli help
+      - name: Package Windows setup and portable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./installers/build_windows_packages.ps1 -SkipPublish
+      - name: Verify Windows package lifecycle
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./installers/test_windows_packages.ps1
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: LunaArc-Windows-Setup
+          path: dist/packages/*-setup-win-x64.exe
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: LunaArc-Windows-Portable
+          path: dist/packages/*-portable-win-x64.zip
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: LunaArc-Windows-Checksums
+          path: dist/packages/SHA256SUMS.txt
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: LunaArc-${{ matrix.runtime }}
