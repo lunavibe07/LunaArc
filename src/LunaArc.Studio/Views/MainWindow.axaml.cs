@@ -42,7 +42,7 @@ public partial class MainWindow : Window
 
     private async void OnExtractToClicked(object? sender, RoutedEventArgs e)
     {
-        if (Vm == null) return;
+        if (Vm == null || !Vm.CanUseArchive) return;
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = "Select extraction folder",
@@ -67,6 +67,9 @@ public partial class MainWindow : Window
         });
 
         if (sourceFiles.Count == 0) return;
+
+        var options = new ArchiveOptionsWindow(Vm);
+        if (!await options.ShowDialog<bool>(this)) return;
 
         string defaultExt = Vm.SelectedFormatIndex switch
         {
@@ -97,5 +100,78 @@ public partial class MainWindow : Window
     {
         if (Vm != null)
             await Vm.OpenOrEnterSelectedItemAsync();
+    }
+
+    private void OnExitClicked(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnFindClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || !Vm.CanUseArchive) return;
+        Vm.IsSearchVisible = true;
+        this.FindControl<TextBox>("SearchBox")?.Focus();
+    }
+
+    private void OnCloseFindClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null) return;
+        Vm.SearchQuery = string.Empty;
+        Vm.IsSearchVisible = false;
+    }
+
+    private async void OnOptionsClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || Vm.IsBusy) return;
+        await new ArchiveOptionsWindow(Vm).ShowDialog<bool>(this);
+    }
+
+    private async void OnInfoClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || !Vm.HasArchive) return;
+        await ShowInformationAsync("Archive information", Path.GetFileName(Vm.CurrentArchivePath),
+            "Path: " + Vm.CurrentArchivePath + "\n\nCurrent view: " + Vm.VisibleSummary +
+            "\n\nComment:\n" + (string.IsNullOrWhiteSpace(Vm.ArchiveComment) ? "No comment." : Vm.ArchiveComment));
+    }
+
+    private async void OnAboutClicked(object? sender, RoutedEventArgs e) =>
+        await ShowInformationAsync("About LunaArc", "LunaArc Archiver",
+            $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}\nArchive manager for Windows and Linux.\n\nCreate .larc, ZIP and TAR GZip archives.\nBrowse, extract and test existing archives.\n\nToolbar icons: Microsoft Fluent UI System Icons (MIT).\nCopyright 2026 LunaArc Software.");
+
+    private Task ShowInformationAsync(string title, string heading, string body)
+    {
+        var dialog = new Window
+        {
+            Title = title, Width = 470, Height = 310, CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Background = Avalonia.Media.Brushes.White,
+            FontFamily = FontFamily, FontSize = 12
+        };
+        var close = new Button { Name = "CloseInformationButton", Content = "Close", Width = 85,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, IsDefault = true, IsCancel = true };
+        close.Click += (_, _) => dialog.Close();
+        var content = new Grid { Margin = new Avalonia.Thickness(20), RowDefinitions = new RowDefinitions("Auto,*,Auto") };
+        content.Children.Add(new TextBlock { Text = heading, FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 0, 0, 12) });
+        var text = new TextBlock { Text = body, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        var scroll = new ScrollViewer { Content = text };
+        Grid.SetRow(scroll, 1);
+        content.Children.Add(scroll);
+        Grid.SetRow(close, 2);
+        content.Children.Add(close);
+        dialog.Content = content;
+        return dialog.ShowDialog(this);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.O && Vm?.CanStartOperation == true)
+        {
+            OnOpenArchiveClicked(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        if (e.Key == Key.F3 && Vm?.CanUseArchive == true)
+        {
+            OnFindClicked(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
     }
 }

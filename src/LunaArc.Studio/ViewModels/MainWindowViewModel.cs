@@ -19,19 +19,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private FlatVfsArena? _currentArena;
     private LunaJobController? _activeJob;
     private readonly Stack<int> _folderHistory = new();
+    private readonly List<VfsRowItem> _folderRows = new();
     private int _currentParentIndex = -1;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WindowTitle))]
+    [NotifyPropertyChangedFor(nameof(HasArchive))]
+    [NotifyPropertyChangedFor(nameof(CanUseArchive))]
     private string _currentArchivePath = string.Empty;
 
     [ObservableProperty]
-    private string _breadcrumbPath = "🌙 LunaArc://Root";
+    private string _breadcrumbPath = "Open an archive";
 
     [ObservableProperty]
     private string _statusMessage = "Ready — Open an archive or select files to compress.";
 
     [ObservableProperty]
-    private string _archiveComment = "Welcome to LunaArc Archiver!";
+    private string _archiveComment = string.Empty;
 
     [ObservableProperty]
     private string _passwordInput = string.Empty;
@@ -40,13 +44,34 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private int _selectedLevelIndex = 3;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEncrypt))]
     private int _selectedFormatIndex = 0;
+
+    public bool CanEncrypt => SelectedFormatIndex == 0;
+
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    [ObservableProperty]
+    private bool _isSearchVisible;
+
+    [ObservableProperty]
+    private string _visibleSummary = "No archive opened";
+
+    public bool HasArchive => _currentArena != null && !string.IsNullOrWhiteSpace(CurrentArchivePath);
+    public string WindowTitle => HasArchive ? Path.GetFileName(CurrentArchivePath) + " - LunaArc" : "LunaArc Archiver";
+    public bool CanUseArchive => CanStartOperation && HasArchive;
+    public bool CanViewSelection => CanUseArchive && SelectedItem != null;
+    public bool CanGoUp => CanUseArchive && _currentParentIndex >= 0;
 
     [ObservableProperty]
     private double _progressPercent = 0;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStartOperation))]
+    [NotifyPropertyChangedFor(nameof(CanUseArchive))]
+    [NotifyPropertyChangedFor(nameof(CanViewSelection))]
+    [NotifyPropertyChangedFor(nameof(CanGoUp))]
     private bool _isBusy = false;
 
     public bool CanStartOperation => !IsBusy;
@@ -55,6 +80,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private string _pauseButtonText = "⏸ Pause";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanViewSelection))]
     private VfsRowItem? _selectedItem;
 
     public ObservableCollection<VfsRowItem> VisibleItems { get; } = new();
@@ -77,9 +103,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             CurrentArchivePath = archivePath;
             _folderHistory.Clear();
             _currentParentIndex = -1;
+            SearchQuery = string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(_currentArena.ArchiveComment))
-                ArchiveComment = _currentArena.ArchiveComment;
+            ArchiveComment = _currentArena.ArchiveComment;
 
             NavigateToFolder(-1);
             StatusMessage = $"✅ Loaded {_currentArena.Count:N0} entries in {sw.ElapsedMilliseconds} ms | Original size: {FormatSize(_currentArena.TotalUncompressedBytes)}";
@@ -98,11 +124,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (_currentArena == null) return;
         _currentParentIndex = folderNodeIndex;
-        VisibleItems.Clear();
+        SelectedItem = null;
+        _folderRows.Clear();
 
         BreadcrumbPath = folderNodeIndex < 0
-            ? $"🌙 {Path.GetFileName(CurrentArchivePath)} /"
-            : $"🌙 {Path.GetFileName(CurrentArchivePath)} / {_currentArena.GetFullPath(folderNodeIndex)}";
+            ? CurrentArchivePath
+            : CurrentArchivePath + " / " + _currentArena.GetFullPath(folderNodeIndex);
 
         var children = _currentArena.GetChildrenIndices(folderNodeIndex);
         foreach (int idx in children)
@@ -112,20 +139,57 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 ? DateTimeOffset.FromUnixTimeSeconds(node.LastWriteUnixTime).LocalDateTime
                 : DateTime.Now;
 
-            VisibleItems.Add(new VfsRowItem
+            _folderRows.Add(new VfsRowItem
             {
                 NodeIndex = idx,
                 Icon = node.IsDirectory ? "📁" : (node.IsEncrypted ? "🔒" : "📄"),
                 Name = _currentArena.GetName(idx),
                 FullRelativePath = _currentArena.GetFullPath(idx),
                 IsDirectory = node.IsDirectory,
-                OriginalSizeDisplay = node.IsDirectory ? "<Folder>" : FormatSize(node.UncompressedSize),
+                OriginalSizeBytes = node.UncompressedSize,
+                CompressedSizeBytes = node.CompressedSize,
+                OriginalSizeDisplay = node.IsDirectory ? string.Empty : FormatSize(node.UncompressedSize),
                 CompressedSizeDisplay = node.IsDirectory ? "-" : FormatSize(node.CompressedSize),
                 RatioDisplay = node.IsDirectory ? "-" : $"{node.CompressionRatio:0.0}%",
                 CrcDisplay = node.IsDirectory ? "-" : $"{node.Crc32:X8}",
                 ModifiedDisplay = dt.ToString("yyyy-MM-dd HH:mm")
             });
         }
+        RefreshVisibleRows();
+        OnPropertyChanged(nameof(CanGoUp));
+        OnPropertyChanged(nameof(CanViewSelection));
+    }
+
+    partial void OnSearchQueryChanged(string value) => RefreshVisibleRows();
+
+    private void RefreshVisibleRows()
+    {
+        SelectedItem = null;
+        VisibleItems.Clear();
+        foreach (var row in _folderRows)
+            if (string.IsNullOrWhiteSpace(SearchQuery) || row.Name.Contains(SearchQuery.Trim(), StringComparison.OrdinalIgnoreCase))
+                VisibleItems.Add(row);
+        int folders = VisibleItems.Count(row => row.IsDirectory);
+        int files = VisibleItems.Count - folders;
+        VisibleSummary = HasArchive ? $"{folders:N0} folders, {files:N0} files | Archive size: {FormatSize(_currentArena!.TotalUncompressedBytes)}" : "No archive opened";
+    }
+
+    [RelayCommand]
+    public void CloseArchive()
+    {
+        if (IsBusy) return;
+        _currentArena = null;
+        CurrentArchivePath = string.Empty;
+        _currentParentIndex = -1;
+        _folderRows.Clear();
+        _folderHistory.Clear();
+        SearchQuery = string.Empty;
+        RefreshVisibleRows();
+        BreadcrumbPath = "Open an archive";
+        ArchiveComment = string.Empty;
+        StatusMessage = "Ready — Open an archive or select files to compress.";
+        OnPropertyChanged(nameof(CanGoUp));
+        OnPropertyChanged(nameof(CanViewSelection));
     }
 
     [RelayCommand]

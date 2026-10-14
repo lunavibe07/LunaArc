@@ -14,6 +14,19 @@ LunaArc is a Windows and Linux archive application built with .NET 8. It include
 
 Core uses SharpCompress 0.50.5 and ZstdSharp.Port 0.8.1. Studio uses Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Standard TAR and TAR GZip handling uses the .NET TAR APIs.
 
+## Desktop interface
+
+Version 1.1 uses a light, classic desktop layout: menu bar, large toolbar icons, archive path, resizable/sortable file columns and a status bar. The layout is inspired by familiar archive managers while retaining LunaArc branding.
+
+- **Open** loads an archive; **Add** selects files and opens the format, level, password and comment dialog before saving a new archive.
+- **Extract To**, **Test** and **View** use the existing archive backend. Archive-only commands stay disabled until an archive is open; View also requires a selection.
+- Double-click a folder to browse it; **Up** returns to its parent. Double-click a file to preview it.
+- **Find** / **F3** filters names in the current folder without changing archive contents. Size columns sort by numeric byte counts.
+- **Info** shows the current archive path, folder/file summary and available comment. **Options** opens compression/password settings; cancelling restores the previous settings.
+- **File** includes close archive and exit; **Tools** contains context-menu installation. **Ctrl+O** opens an archive.
+
+The interface lists archive contents; it is not a general system-drive file browser. Delete and Repair commands are not exposed because the backend does not implement archive editing/repair. Both installed and portable Windows editions have this same interface. Toolbar artwork comes from Microsoft Fluent UI System Icons; its MIT notice is included in every published folder.
+
 ## Requirements
 
 - .NET 8 SDK, version 8.0.400 or later in the 8.0 SDK family; `global.json` selects the latest installed compatible feature band.
@@ -36,9 +49,12 @@ Run the integration checks:
 
 ```text
 dotnet run --project tests/LunaArc.SmokeTests -c Release
+dotnet run --project tests/LunaArc.StudioChecks -c Release
 ```
 
 The checks exercise .larc (compressed, uncompressed and encrypted), ZIP and TAR GZip round trips; compare SHA-256 content hashes; check wrong passwords, Unicode paths, empty files, cancellation, preview isolation, unsafe paths, corrupt ZIP data and preservation of an existing extraction destination. A failing check produces a nonzero exit code. These checks do not register shell menus or use personal files.
+
+StudioChecks uses Avalonia's headless Skia renderer to capture real UI frames and verify theme, archive loading, command binding, filtering, folder navigation, dialogs, cancellation of option edits and minimum-width layout. Screenshots default to the ignored `.tools/ui-preview` directory; CI uploads separate `LunaArc-UI-Preview-win-x64` / `linux-x64` artifacts. Native OS file-picker dialogs and OS window chrome are outside these checks.
 
 ## Publish Windows and Linux
 

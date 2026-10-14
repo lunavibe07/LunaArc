@@ -16,6 +16,7 @@ Read relevant source before editing. Source and project files define current beh
 - `src/LunaArc.Cli`: executable `luna-cli`; depends on Core and Shell.
 - `src/LunaArc.Studio`: executable `LunaArc`; Avalonia views and CommunityToolkit.Mvvm ViewModels; depends on Core and Shell.
 - `tests/LunaArc.SmokeTests`: dependency-light integration checks using disposable synthetic fixtures.
+- `tests/LunaArc.StudioChecks`: headless Skia rendering and interaction checks for the actual Avalonia views, with PNG captures.
 - `installers`: self-contained publish scripts, versioned Windows portable ZIP/setup packaging, Inno Setup definition and CI-only installer lifecycle checks.
 - `branding`: logo and EULA; `native_libs`: optional-library notes, not an implemented native adapter.
 - `.github/workflows/build.yml`: native Windows/Linux verification and artifact publishing in CI.
@@ -55,6 +56,7 @@ Current dependencies: SharpCompress 0.50.5, ZstdSharp.Port 0.8.1, Avalonia 11.1.
 - Avoid whole-file buffering in new large-file paths. Validate lengths, offsets, overflow and allocation limits before trusting archive metadata.
 - Preserve VFS parent/child relationships, full paths, metadata and root detection. Archive paths are case-sensitive, even on a case-insensitive host.
 - Keep Studio state/commands in ViewModels and layout/bindings in XAML. Run archive work off the UI thread and dispatch progress/watcher notifications to the UI thread.
+- Studio uses a light classic desktop layout with menu/toolbar/path/DataGrid/status bar. Keep unsupported archive editing/repair actions out of the toolbar. Compression/password/comment options live in a modal dialog; cancellation restores prior values. Preserve numeric size sorting and current-folder name filtering.
 - Prevent overlapping jobs; verify busy, error, cancel and selection/navigation behavior. Check generated commands and bindings when changing XAML.
 
 ## Archive and filesystem rules
@@ -78,6 +80,7 @@ dotnet restore LunaArc.sln
 dotnet build LunaArc.sln -c Debug --no-restore
 dotnet build LunaArc.sln -c Release --no-restore
 dotnet run --project tests/LunaArc.SmokeTests -c Release
+dotnet run --project tests/LunaArc.StudioChecks -c Release
 dotnet run --project src/LunaArc.Cli -- help
 dotnet run --project src/LunaArc.Studio
 ```
@@ -87,6 +90,8 @@ Use only relevant checks for a given change. Markdown-only edits do not need an 
 Backend checks should include round trips and independent hashes/readers where relevant, Unicode and empty files, wrong passwords, invalid archives/paths, overwrite behavior and cancellation. Do not open extracted files with OS applications during automated tests.
 
 For UI changes, verify the affected rendered flow when a desktop is available. Process startup is not a full UI interaction test. For performance changes, record fixture size/count, hardware, time and memory measurements.
+
+For Studio layout changes, run StudioChecks, inspect its PNG frames, and distinguish headless rendering from native OS chrome/file-picker testing. Imported toolbar geometries come from Microsoft Fluent UI System Icons; retain branding/Fluent_Icons_LICENSE.txt and publish its notice with both editions.
 
 Publish via `installers/build_windows.ps1` (PowerShell) or `installers/build_linux.sh` (Bash). Both support win-x64/linux-x64 targets. Check exit codes and executable artifacts, native-library packaging and trimming settings. Cross-publish success does not establish native Linux runtime success; CI results must be distinguished from a merely added workflow.
 

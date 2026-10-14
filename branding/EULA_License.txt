@@ -8,4 +8,5 @@ LunaArc Archiver and the ".larc" archive specification are proprietary products 
 - SharpCompress (MIT License)
 - ZstdSharp.Port (MIT License)
 - Avalonia UI (MIT License)
+- Microsoft Fluent UI System Icons (MIT License; see Fluent_Icons_LICENSE.txt)
 - Optional 7-Zip dynamic library 7z.dll / 7z.so (GNU LGPL v2.1 + unRAR license restriction)

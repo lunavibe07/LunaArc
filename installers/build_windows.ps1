@@ -29,6 +29,7 @@ try {
         }
     }
     Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/EULA_License.txt') -Destination $publishDir
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/Fluent_Icons_LICENSE.txt') -Destination $publishDir
     Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $publishDir
     if ($Runtime.StartsWith('win-')) {
         foreach ($script in @('InstallContextMenu.cmd', 'UninstallContextMenu.cmd')) {

@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5F380FA3
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunaArc.SmokeTests", "tests\LunaArc.SmokeTests\LunaArc.SmokeTests.csproj", "{7AAA7C03-3EB1-4C9D-90DF-108E8025C42E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunaArc.StudioChecks", "tests\LunaArc.StudioChecks\LunaArc.StudioChecks.csproj", "{8DEF1820-A520-470D-80BE-C78B605595A2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,8 +42,13 @@ Global
 		{7AAA7C03-3EB1-4C9D-90DF-108E8025C42E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AAA7C03-3EB1-4C9D-90DF-108E8025C42E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AAA7C03-3EB1-4C9D-90DF-108E8025C42E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DEF1820-A520-470D-80BE-C78B605595A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DEF1820-A520-470D-80BE-C78B605595A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DEF1820-A520-470D-80BE-C78B605595A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DEF1820-A520-470D-80BE-C78B605595A2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{7AAA7C03-3EB1-4C9D-90DF-108E8025C42E} = {5F380FA3-DAA9-4CE4-BA95-CA6A5193A933}
+		{8DEF1820-A520-470D-80BE-C78B605595A2} = {5F380FA3-DAA9-4CE4-BA95-CA6A5193A933}
 	EndGlobalSection
 EndGlobal

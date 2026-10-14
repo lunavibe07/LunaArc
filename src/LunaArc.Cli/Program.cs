@@ -225,7 +225,7 @@ public static class Program
     private static void PrintBanner()
     {
         Console.WriteLine("====================================================================");
-        Console.WriteLine("🌙 LUNAARC ARCHIVER CLI v1.0.0 (Windows & Linux High-Speed Engine)");
+        Console.WriteLine($"LUNAARC ARCHIVER CLI v{typeof(Program).Assembly.GetName().Version?.ToString(3)} (Windows & Linux)");
         Console.WriteLine("====================================================================");
         Console.WriteLine("Usage:");
         Console.WriteLine("  luna-cli list <archive> [-p password]         : List archive entries");

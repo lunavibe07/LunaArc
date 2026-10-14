@@ -1,0 +1,16 @@
+﻿# Classic desktop interface inspired by the supplied archive-manager screenshot
+
+- Time: 2026-10-15 00:49:50 (Asia/Bangkok, UTC+07:00).
+- Request: restyle LunaArc to resemble the supplied WinRAR desktop screenshot. Keep project/UI text in English and ship the same UI in installed/portable editions.
+- Before: dark card-based window, inline compression settings, fixed ListBox columns and a permanent comment panel.
+- After: light desktop menu bar, colored library icons, large Open/Add/Extract To/Test/View/Find/Info/Options toolbar, archive path, resizable/sortable DataGrid, compact status summary and job-only progress controls. Optional Find band filters current-folder names. Format/level/password/comment settings move into a modal dialog; cancellation restores values. Info/About/Close and Ctrl+O/F3 navigation are functional. Existing archive operations remain connected to the shared backend.
+- Scope: this is an archive-content browser, not a system-drive file manager. Unsupported Delete/Repair controls are not presented. Native window chrome and OS file-picker dialogs retain platform behavior.
+- Version: 1.1.0 from Directory.Build.props; CLI/About display the assembly version. Installer AppId remains unchanged for upgrade compatibility.
+- Assets/dependencies: Avalonia.Controls.DataGrid 11.1.3; Microsoft Fluent UI System Icons regular 24px SVG geometries with upstream MIT license included in publish folders. No WinRAR logo or proprietary icon assets copied.
+- Files: Studio App/theme, project dependencies, main XAML/code-behind, ViewModel/row model, new options window and icon dictionary; new StudioChecks project and solution; workflow; both publish scripts; branding icon license/EULA; product version/CLI banner; README.md, AGENT.md; this log.
+- Local verification: Debug and Release solution builds passed with zero warnings/errors; 22 rendered Studio UI checks passed, including loading, command binding/testing, case-insensitive filtering, folder navigation, info/options dialogs, restoring cancelled options and fitting the toolbar at a 720px viewport. PNG frames (empty/archive/find/options/compact) were captured with the actual Avalonia headless Skia renderer and visually inspected. 63 archive/filesystem checks and 45 isolated Windows Registry checks also passed. Git diff whitespace check passed.
+- CI: the Windows/Linux workflow now runs StudioChecks and uploads UI PNG artifacts before publishing binaries and setup/portable packages. The new run must establish native-runner/package results; see GitHub Actions for its final state.
+- Limits: headless rendering validates app content and interactions, not native OS chrome or file-picker interactions. No actual Explorer registration is changed by local UI/Registry checks. Existing archive-format/crypto limits remain documented in README.
+- Release status at this point: local source prepared for the already-authorized GitHub repository; generated UI captures and binaries remain ignored. Both editions consume the same Studio binaries. No public release/tag or production deployment.
+
+References: https://v11.docs.avaloniaui.net/docs/concepts/headless/ ; https://docs.avaloniaui.net/controls/data-display/structured-data/datagrid ; https://github.com/microsoft/fluentui-system-icons

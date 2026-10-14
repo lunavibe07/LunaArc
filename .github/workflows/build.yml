@@ -32,6 +32,13 @@ jobs:
         run: dotnet build LunaArc.sln -c Release --no-restore
       - name: Archive smoke checks
         run: dotnet run --project tests/LunaArc.SmokeTests -c Release --no-build
+      - name: Rendered Studio UI checks
+        run: dotnet run --project tests/LunaArc.StudioChecks -c Release --no-build -- dist/ui-preview/${{ matrix.runtime }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LunaArc-UI-Preview-${{ matrix.runtime }}
+          path: dist/ui-preview/${{ matrix.runtime }}/*.png
+          if-no-files-found: error
       - name: Publish Windows
         if: runner.os == 'Windows'
         shell: pwsh
