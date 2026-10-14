@@ -52,10 +52,24 @@ try {
         try { [xml]$manifest = $reader.ReadToEnd() }
         finally { $reader.Dispose(); $manifestStream.Dispose() }
         if ($manifest.Package.Identity.Name -ne $packageName -or $manifest.Package.Identity.Publisher -ne $certificate.Subject) { throw 'Unexpected menu package identity.' }
+        $hashEntry = $zip.GetEntry('Assets/MenuDll.sha256')
+        if (-not $hashEntry -or $hashEntry.Length -gt 256) { throw 'Missing native DLL hash pin.' }
+        $hashStream = $hashEntry.Open()
+        $hashReader = New-Object IO.StreamReader($hashStream)
+        try { $expectedDllHash = $hashReader.ReadToEnd().Trim() }
+        finally { $hashReader.Dispose(); $hashStream.Dispose() }
+        if ($expectedDllHash -notmatch '^[0-9a-fA-F]{64}$' -or
+            (Get-FileHash -LiteralPath (Join-Path $directory 'LunaArc.ContextMenu.dll') -Algorithm SHA256).Hash -ne $expectedDllHash) {
+            throw 'The native menu DLL does not match the hash in its signed package.'
+        }
     } finally { $zip.Dispose() }
-    $dllSignature = Get-AuthenticodeSignature -LiteralPath (Join-Path $directory 'LunaArc.ContextMenu.dll')
-    if ($dllSignature.Status -notin @('Valid','NotTrusted') -or $dllSignature.SignerCertificate.Thumbprint -ne $certificate.Thumbprint) { throw 'The native menu DLL signature did not validate.' }
-    if ($VerifyOnly) { Write-Output 'PASS: MSIX signer, identity and native DLL signature verified without installing certificate trust or registering Explorer.'; exit 0 }
+    # Chain trust is a separate user decision: pin the signer and full signed-DLL bytes.
+    # Add-AppxPackage must authenticate the MSIX payload (including the hash pin) before activation.
+    $dllCertificate = [Security.Cryptography.X509Certificates.X509Certificate]::CreateFromSignedFile((Join-Path $directory 'LunaArc.ContextMenu.dll'))
+    try {
+        if ($dllCertificate.GetCertHashString() -ne $certificate.Thumbprint) { throw 'Native DLL and package signers differ.' }
+    } finally { $dllCertificate.Dispose() }
+    if ($VerifyOnly) { Write-Output 'PASS: package signer/identity and native DLL hash/signer pins checked without installing trust or registering Explorer.'; exit 0 }
     if (-not (Test-Path -LiteralPath ('Cert:/CurrentUser/TrustedPeople/' + $certificate.Thumbprint))) {
         if (-not $TrustCertificate) {
             Write-Host "Publisher: $($certificate.Subject)"

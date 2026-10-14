@@ -68,13 +68,14 @@ try {
             $writer.Write($png)
         } finally { $writer.Dispose(); $iconStream.Dispose() }
     } finally { $graphics.Dispose(); $bitmap.Dispose(); $dark.Dispose(); $gradient.Dispose(); $white.Dispose(); $blue.Dispose() }
+    & $signtool sign /fd SHA256 /sha1 $certificate.Thumbprint $dll
+    if ($LASTEXITCODE -ne 0) { throw 'Native menu signing failed.' }
+    Set-Content -LiteralPath (Join-Path $assets 'MenuDll.sha256') -Value (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash -Encoding ASCII
     $package = Join-Path $OutputDirectory 'LunaArc.ShellMenu.msix'
     & $makeappx pack /o /d $staging /nv /p $package
     if ($LASTEXITCODE -ne 0) { throw 'Sparse menu package build failed.' }
-    foreach ($file in @($dll,$package)) {
-        & $signtool sign /fd SHA256 /sha1 $certificate.Thumbprint $file
-        if ($LASTEXITCODE -ne 0) { throw 'Menu signing failed.' }
-    }
+    & $signtool sign /fd SHA256 /sha1 $certificate.Thumbprint $package
+    if ($LASTEXITCODE -ne 0) { throw 'Menu package signing failed.' }
     Export-Certificate -Cert $certificate -FilePath (Join-Path $OutputDirectory 'LunaArc.Menu.cer') | Out-Null
     foreach ($file in @('RegisterWindows11Menu.ps1','InstallWindows11Menu.cmd')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $OutputDirectory

@@ -21,7 +21,7 @@ static ComPtr<IShellItemArray> Selection(const std::filesystem::path& path) {
     return items;
 }
 int wmain(int argc, wchar_t** argv) {
-    if (argc != 2) return 2;
+    if (argc != 2 && !(argc == 3 && std::wstring(argv[2]) == L"--registered")) return 2;
     HRESULT init = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(init)) return 2;
     wchar_t temp[MAX_PATH]{};
@@ -94,6 +94,15 @@ int wmain(int argc, wchar_t** argv) {
         }
         Check(FolderName(L"C:\\release.TAR.GZ") == L"release", "Compound extension handled");
         Check(IsArchive(L"C:\\archive.RAR") && !IsArchive(L"C:\\notes.txt"), "Archive extension filtering");
+        if (argc == 3) {
+            ComPtr<IExplorerCommand> registered;
+            Check(SUCCEEDED(CoCreateInstance(MenuClsid, nullptr, CLSCTX_LOCAL_SERVER, IID_PPV_ARGS(&registered))), "Activate the sparse-package COM server");
+            PWSTR registeredTitle = nullptr;
+            Check(SUCCEEDED(registered->GetTitle(nullptr, &registeredTitle)) && std::wstring(registeredTitle) == L"LunaArc", "Registered COM server provides the app title");
+            CoTaskMemFree(registeredTitle);
+            EXPCMDFLAGS registeredFlags{};
+            Check(SUCCEEDED(registered->GetFlags(&registeredFlags)) && registeredFlags == ECF_HASSUBCOMMANDS, "Registered server exposes its submenu");
+        }
         FreeLibrary(library); library = nullptr;
         Check(std::filesystem::weakly_canonical(directory).parent_path() == std::filesystem::weakly_canonical(temp), "Cleanup stays inside the OS temp directory");
         std::filesystem::remove_all(directory);
