@@ -10,7 +10,7 @@ Get-Command cmake.exe -ErrorAction Stop | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Configure the native menu with Visual Studio C++ tools and Windows SDK installed.' }
 & cmake.exe --build $buildDir --config Release
 if ($LASTEXITCODE -ne 0) { throw 'Native menu build failed.' }
-& ctest.exe --test-dir $buildDir -C Release --output-on-failure
+& ctest.exe --test-dir $buildDir -C Release --verbose --output-on-failure
 if ($LASTEXITCODE -ne 0) { throw 'Native menu contract checks failed.' }
 New-Item -ItemType Directory -Path $OutputDirectory,$staging -Force | Out-Null
 $dll = Join-Path $OutputDirectory 'LunaArc.ContextMenu.dll'

@@ -1,8 +1,15 @@
 [CmdletBinding()]
-param([switch]$Unregister, [switch]$TrustCertificate, [switch]$VerifyOnly, [string]$InstallationDirectory = $PSScriptRoot)
+param([switch]$Unregister, [switch]$TrustCertificate, [switch]$VerifyOnly, [string]$InstallationDirectory = '')
 $ErrorActionPreference = 'Stop'
 $packageName = 'LunaArc.ShellMenu'
-$directory = [IO.Path]::GetFullPath($InstallationDirectory).TrimEnd('\')
+if ([string]::IsNullOrWhiteSpace($InstallationDirectory)) { $InstallationDirectory = $PSScriptRoot }
+function Get-NormalizedDirectory([string]$Path) {
+    $full = [IO.Path]::GetFullPath($Path)
+    $root = [IO.Path]::GetPathRoot($full)
+    if ($full.Length -eq $root.Length) { return $root }
+    return $full.TrimEnd('\')
+}
+$directory = Get-NormalizedDirectory $InstallationDirectory
 $ownershipKey = 'HKCU:/Software/LunaArc/ModernMenu'
 try {
     if ($Unregister) {
@@ -12,7 +19,7 @@ try {
             if ($package.PackageFullName -ne $owner.PackageFullName) { continue }
             $manager = [Windows.Management.Deployment.PackageManager,Windows.Management.Deployment,ContentType=WindowsRuntime]::new()
             $installed = $manager.FindPackageForUser('', $package.PackageFullName)
-            if ($installed.EffectiveExternalLocation.Path.TrimEnd('\') -ne $directory) { continue }
+            if ((Get-NormalizedDirectory $installed.EffectiveExternalLocation.Path) -ne $directory) { continue }
             Remove-AppxPackage -Package $package.PackageFullName
         }
         Remove-Item -LiteralPath $ownershipKey -Force

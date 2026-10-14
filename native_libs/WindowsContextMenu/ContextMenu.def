@@ -1,4 +1,4 @@
-LIBRARY "LunaArc.ContextMenu"
+LIBRARY "LunaArc.ContextMenu.dll"
 EXPORTS
     DllGetClassObject PRIVATE
     DllCanUnloadNow PRIVATE
