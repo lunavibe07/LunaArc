@@ -16,7 +16,7 @@ Core uses SharpCompress 0.50.5 and ZstdSharp.Port 0.8.1. Studio uses Avalonia 11
 
 ## Desktop interface
 
-Version 1.1 uses a light, classic desktop layout: menu bar, large toolbar icons, archive path, resizable/sortable file columns and a status bar. The layout is inspired by familiar archive managers while retaining LunaArc branding.
+Since version 1.1, LunaArc uses a light, classic desktop layout: menu bar, large toolbar icons, archive path, resizable/sortable file columns and a status bar. The layout is inspired by familiar archive managers while retaining LunaArc branding.
 
 - **Open** loads an archive; **Add** selects files and opens the format, level, password and comment dialog before saving a new archive.
 - **Extract To**, **Test** and **View** use the existing archive backend. Archive-only commands stay disabled until an archive is open; View also requires a selection.
@@ -155,7 +155,7 @@ Shell registration is explicit and changes the current user's OS configuration. 
 - Split-volume output exists for .larc/ZIP, but reading those split outputs is not implemented. Do not use it when an immediately readable archive is required.
 - File preview uses an isolated temporary session. Editing a preview does not update the original archive.
 - `.larc` currently buffers each file in memory. Large-file memory usage and speed claims require benchmarks.
-- `PasswordVault` stores plaintext JSON in the user's application-data directory; it is not a secure credential store.
+- `PasswordVault` uses authenticated AES-256-GCM encryption with a master password. Legacy plaintext JSON is not imported automatically; see the recovery/vault section above.
 - TAR links and special/device entries are rejected. ZIP/TAR/.larc do not all preserve the same metadata or empty-directory behavior.
 - Verified extraction contents are written to temporary files before replacing existing destinations. ZIP and .larc CRC failures preserve the old destination. When `KeepBrokenFiles` is enabled for ZIP/.larc, incomplete content is retained under a unique `.broken-<id>` name.
 
@@ -164,11 +164,11 @@ Shell registration is explicit and changes the current user's OS configuration. 
 The current Windows checkout was checked with .NET SDK 8.0.426:
 
 - Debug and Release solution builds passed with zero warnings and zero errors.
-- 63 backend/archive smoke checks passed on Windows.
+- 122 backend/archive smoke checks passed on Windows, including list/mask password recovery, ZIP AES authentication and encrypted-vault failure cases.
 - 45 isolated Windows Registry checks verify context-menu registration/removal, executable quoting, existing default applications, other applications' entries and installation-scoped cleanup. They do not modify the real Explorer configuration. Full setup lifecycle verification runs in the Windows CI job.
-- Both `win-x64` and `linux-x64` self-contained publishes succeeded.
-- 16 checks passed against the packaged Windows CLI; the packaged GUI remained running during a four-second startup check.
-- Linux output files were checked for ELF signatures. Native Linux execution, Bash-script execution and full desktop UI interactions were not verified locally because this machine has no Linux runtime or connected desktop automation.
+- 37 rendered Studio checks passed, including recovering a password, opening the archive, testing and extracting with its session secret, and vault operations.
+- The version 1.2 `win-x64` self-contained publish succeeded and its CLI help ran successfully.
+- Native Linux build, backend checks, rendered UI checks and publish passed in CI for the recovery implementation commit `2f90420`. This Windows machine does not establish native Linux desktop behavior; OS file-picker dialogs and full desktop interaction remain outside the headless checks.
 
 CI results belong to the specific commit/run; review the Actions tab before downloading an artifact.
 

@@ -29,3 +29,5 @@ Integrate the proposed password-list unlocker, mask recovery, encrypted vault an
 Recovery is a bounded search, not a universal decryption algorithm. No GPU acceleration, persisted checkpoints or legacy plaintext-vault import is implemented. Pause applies between candidate attempts. LARC testing uses disposable temporary extraction and its existing whole-file buffering; metadata bounds are not comprehensive archive-bomb protection. Managed secret strings cannot be guaranteed to be erased immediately. Legacy password_vault.json is preserved and not read automatically.
 
 Self-contained Windows publish succeeded at dist/win-x64; its CLI help runs successfully. Native Linux verification and Windows installer/portable packaging are delegated to the repository's CI workflow after source upload. No real local shell registration or installer lifecycle mutation is used.
+
+Source commit 2f90420 was pushed to main. Its Linux job passed native build, archive checks, rendered UI checks and publish in run 38618480395. A documentation follow-up removes the old plaintext-vault claim and refreshes the README verification counts before final package publication.
