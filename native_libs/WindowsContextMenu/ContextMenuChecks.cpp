@@ -72,7 +72,7 @@ int wmain(int argc, wchar_t** argv) {
                 Check(SUCCEEDED(child->GetState(file.Get(), FALSE, &state)), "File command state");
                 if (state == ECS_ENABLED) ++fileCommands;
                 Check(SUCCEEDED(child->GetState(folder.Get(), FALSE, &state)) &&
-                    state == (index >= 5 ? ECS_ENABLED : ECS_HIDDEN), "Folder command state");
+                    state == static_cast<EXPCMDSTATE>(index >= 5 ? ECS_ENABLED : ECS_HIDDEN), "Folder command state");
             }
             Check(archiveCommands == 4 && fileCommands == 2, "Archives have four actions; other files have two compression actions");
             ComPtr<IExplorerCommand> end;
