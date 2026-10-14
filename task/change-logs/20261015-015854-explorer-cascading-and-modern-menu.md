@@ -25,6 +25,7 @@ Match the supplied WinRAR-style Explorer submenu: app-attributed LunaArc group, 
 - The signed MSIX carries a SHA-256 pin of the full signed native DLL. Registration checks that pin and matching signers; Windows authenticates the complete MSIX payload before package activation. This separates content verification from the user's certificate-trust decision rather than treating an untrusted certificate as a modified DLL.
 - CI lifecycle checks now also register the modern package, activate its COM server, transfer equal-version ownership to a portable copy and verify scoped removal.
 - Actual registration rejected CurrentUser/TrustedPeople with 0x800B0109. Preview trust therefore uses LocalMachine/TrustedPeople, with explicit user consent and an elevated certificate-only helper; package registration stays with the original user. The Setup task and documentation state this scope/administrator requirement. No local trust was installed.
+- The preview sparse package registered successfully on the Windows CI runner with machine peer trust. WinRT ownership checks are delegated to Windows PowerShell 5 because PowerShell 7 does not project those Windows Runtime types.
 
 ## Limits
 

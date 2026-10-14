@@ -40,9 +40,9 @@ function Register-ModernMenu([string]$Directory) {
 function Assert-ModernOwner([string]$Directory) {
     $owner = Get-ItemProperty -LiteralPath 'HKCU:\Software\LunaArc\ModernMenu'
     if ($owner.InstallationDirectory -ne $Directory) { throw 'Modern menu ownership does not match the active installation.' }
-    $manager = [Windows.Management.Deployment.PackageManager,Windows.Management.Deployment,ContentType=WindowsRuntime]::new()
-    $package = $manager.FindPackageForUser('', $owner.PackageFullName)
-    if ($package.EffectiveExternalLocation.Path -ne $Directory) { throw 'Sparse package external location is incorrect.' }
+    # Windows PowerShell 5 projects WinRT types; PowerShell 7 does not.
+    Invoke-HiddenProgram 'powershell.exe' @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',
+        ('"' + (Join-Path $Directory 'RegisterWindows11Menu.ps1') + '"'),'-VerifyOwnership')
 }
 
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null

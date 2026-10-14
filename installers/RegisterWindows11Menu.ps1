@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Unregister, [switch]$TrustCertificate, [switch]$VerifyOnly, [switch]$ImportCertificateOnly, [string]$InstallationDirectory = '')
+param([switch]$Unregister, [switch]$TrustCertificate, [switch]$VerifyOnly, [switch]$VerifyOwnership, [switch]$ImportCertificateOnly, [string]$InstallationDirectory = '')
 $ErrorActionPreference = 'Stop'
 # Start-Process from PowerShell 7 can inherit incompatible PowerShell 7 modules.
 # Resolve only the built-in Windows PowerShell modules for certificate/Appx operations.
@@ -17,16 +17,21 @@ function Get-NormalizedDirectory([string]$Path) {
 $directory = Get-NormalizedDirectory $InstallationDirectory
 $ownershipKey = 'HKCU:/Software/LunaArc/ModernMenu'
 try {
-    if ($Unregister) {
+    if ($Unregister -or $VerifyOwnership) {
         $owner = Get-ItemProperty -LiteralPath $ownershipKey -ErrorAction SilentlyContinue
-        if (-not $owner -or $owner.InstallationDirectory -ne $directory) { exit 0 }
+        if (-not $owner -or $owner.InstallationDirectory -ne $directory) {
+            if ($VerifyOwnership) { throw 'The modern menu is not owned by this directory.' }
+            exit 0
+        }
         foreach ($package in @(Get-AppxPackage -Name $packageName)) {
             if ($package.PackageFullName -ne $owner.PackageFullName) { continue }
             $manager = [Windows.Management.Deployment.PackageManager,Windows.Management.Deployment,ContentType=WindowsRuntime]::new()
             $installed = $manager.FindPackageForUser('', $package.PackageFullName)
             if ((Get-NormalizedDirectory $installed.EffectiveExternalLocation.Path) -ne $directory) { continue }
+            if ($VerifyOwnership) { Write-Output 'PASS: modern menu owner, package identity and effective external location match.'; exit 0 }
             Remove-AppxPackage -Package $package.PackageFullName
         }
+        if ($VerifyOwnership) { throw 'The registered package does not match its ownership record.' }
         Remove-Item -LiteralPath $ownershipKey -Force
         Write-Output 'Removed the modern menu owned by this folder. Certificate trust is left unchanged.'
         exit 0
