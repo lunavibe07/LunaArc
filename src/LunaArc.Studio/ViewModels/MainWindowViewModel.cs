@@ -367,7 +367,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             string guiExe = Path.Combine(baseDir, OperatingSystem.IsWindows() ? "LunaArc.exe" : "LunaArc");
             string cliExe = Path.Combine(baseDir, OperatingSystem.IsWindows() ? "luna-cli.exe" : "luna-cli");
             ShellRegistrarFactory.CreateForCurrentOs().RegisterContextMenuAndAssociations(guiExe, cliExe);
-            StatusMessage = "✅ LunaArc shell integration registered.";
+            StatusMessage = OperatingSystem.IsWindows()
+                ? "Context menus installed. Right-click an archive and choose Show more options on Windows 11."
+                : "LunaArc shell integration registered.";
         }
         catch (Exception ex)
         {

@@ -33,6 +33,7 @@ Current dependencies: SharpCompress 0.50.5, ZstdSharp.Port 0.8.1, Avalonia 11.1.
 - `PasswordVault` writes plaintext JSON; never describe it as a secure secret store or include its contents in logs/fixtures.
 - AES-256-CBC and CRC32 do not provide authenticated encryption. Format/crypto changes require explicit compatibility decisions.
 - Shell registration modifies user configuration and does not guarantee a default-app change on modern Windows or Linux. Linux currently creates a launcher and Nautilus scripts, not Dolphin menus.
+- Windows classic context-menu verbs belong under per-extension `SystemFileAssociations`, independent of the default app. Preserve existing defaults and other applications' verbs. Package InstallContextMenu.cmd/UninstallContextMenu.cmd in Windows outputs and notify Explorer after registration changes. Windows 11 users must use Show more options; modern IExplorerCommand integration is not implemented.
 
 ## Workflow
 

@@ -22,7 +22,7 @@
                         Background="#0284C7" Foreground="White" FontWeight="SemiBold" Margin="0,0,8,0" Padding="12,8"/>
                 <Button Content="🔍 Test Archive" Command="{Binding TestCurrentArchiveCommand}"
                         Background="#059669" Foreground="White" FontWeight="SemiBold" Margin="0,0,8,0" Padding="12,8"/>
-                <Button Content="⚙️ Register Shell Menu" Command="{Binding RegisterOsShellMenuCommand}"
+                <Button Content="⚙️ Install Context Menu" Command="{Binding RegisterOsShellMenuCommand}"
                         Background="#334155" Foreground="#E2E8F0" Margin="0,0,12,0" Padding="12,8"/>
 
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">

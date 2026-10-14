@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/LunaArc.Core/LunaArc.Core.csproj" />
+    <ProjectReference Include="../../src/LunaArc.Shell/LunaArc.Shell.csproj" />
   </ItemGroup>
 </Project>

@@ -28,7 +28,9 @@ public static class Program
 
         try
         {
-            string[] archiveCommands = { "list", "l", "extract-here", "x", "extract-smart", "pack-larc", "pack-zip", "test", "t" };
+            string[] archiveCommands = { "list", "l", "extract-here", "x", "extract-smart", "extract-folder", "pack-larc", "pack-zip", "test", "t" };
+            if (command is "register-shell" or "unregister-shell" && args.Length != 1)
+                throw new ArgumentException($"Command '{command}' takes no arguments.");
             if (archiveCommands.Contains(command) && (args.Length < 2 || args[1].StartsWith('-')))
                 throw new ArgumentException($"Command '{command}' requires a file or directory path.");
             for (int i = 2; i < args.Length; i += 2)
@@ -74,15 +76,15 @@ public static class Program
                     break;
                 }
 
-                case "extract-smart":
+                case "extract-smart" or "extract-folder":
                 {
                     string archivePath = Path.GetFullPath(args[1]);
                     string parentDir = Path.GetDirectoryName(archivePath) ?? Environment.CurrentDirectory;
-                    string archiveNameNoExt = Path.GetFileNameWithoutExtension(archivePath);
+                    string archiveNameNoExt = GetArchiveFolderName(archivePath);
                     string? pwd = GetOptionValue(args, "-p");
                     var catalog = await backend.ReadCatalogAsync(archivePath, pwd);
 
-                    string destDir = catalog.HasSingleRootFolder(out _)
+                    string destDir = command == "extract-smart" && catalog.HasSingleRootFolder(out _)
                         ? parentDir
                         : Path.Combine(parentDir, archiveNameNoExt);
 
@@ -165,7 +167,16 @@ public static class Program
                     string cliExe = Path.Combine(baseDir, OperatingSystem.IsWindows() ? "luna-cli.exe" : "luna-cli");
                     string guiExe = Path.Combine(baseDir, OperatingSystem.IsWindows() ? "LunaArc.exe" : "LunaArc");
                     ShellRegistrarFactory.CreateForCurrentOs().RegisterContextMenuAndAssociations(guiExe, cliExe);
-                    Console.WriteLine("✅ LunaArc shell integration registered.");
+                    Console.WriteLine(OperatingSystem.IsWindows()
+                        ? "LunaArc context menus installed. On Windows 11, select Show more options after right-clicking an archive."
+                        : "LunaArc shell integration registered.");
+                    break;
+                }
+
+                case "unregister-shell":
+                {
+                    ShellRegistrarFactory.CreateForCurrentOs().UnregisterAll();
+                    Console.WriteLine("LunaArc shell integration removed.");
                     break;
                 }
 
@@ -195,6 +206,14 @@ public static class Program
         return null;
     }
 
+    private static string GetArchiveFolderName(string archivePath)
+    {
+        string name = Path.GetFileName(archivePath);
+        foreach (string extension in new[] { ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst" })
+            if (name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return name[..^extension.Length];
+        return Path.GetFileNameWithoutExtension(name);
+    }
+
     private static void PrintBanner()
     {
         Console.WriteLine("====================================================================");
@@ -204,9 +223,11 @@ public static class Program
         Console.WriteLine("  luna-cli list <archive> [-p password]         : List archive entries");
         Console.WriteLine("  luna-cli extract-here <archive> [-o directory]  : Extract archive");
         Console.WriteLine("  luna-cli extract-smart <archive> [-p password] : Extract into a suitable folder");
+        Console.WriteLine("  luna-cli extract-folder <archive> [-p password]: Always extract into an archive-named folder");
         Console.WriteLine("  luna-cli pack-larc <source> [-p password]       : Create a .larc archive");
         Console.WriteLine("  luna-cli pack-zip <source>          : Create a ZIP archive");
         Console.WriteLine("  luna-cli test <archive> [-p password]         : Test archive integrity");
         Console.WriteLine("  luna-cli register-shell                        : Register shell integration");
+        Console.WriteLine("  luna-cli unregister-shell                      : Remove shell integration");
     }
 }

@@ -60,7 +60,17 @@ Both scripts publish self-contained executables, include native libraries in the
 
 To use a specific SDK executable, pass `-DotNet /path/to/dotnet` to the PowerShell script or set `DOTNET_COMMAND=/path/to/dotnet` for Bash. Scripts also use `.tools/dotnet` when no SDK is available in PATH. This checkout has a local Windows SDK at `.tools/dotnet/dotnet.exe`; it is ignored by version control. For local build commands in this environment, use `& ./.tools/dotnet/dotnet.exe` in place of `dotnet`.
 
-Cross-publishing Linux binaries on Windows verifies packaging, not Linux execution. The local GitHub Actions workflow defines native Windows and Ubuntu build, smoke-test and publish jobs; those jobs still need to run in GitHub to establish CI results.
+Cross-publishing Linux binaries on Windows verifies packaging, not Linux execution. The GitHub Actions workflow runs native Windows and Ubuntu build, smoke-test and publish jobs. Check the run for your downloaded artifact in the repository's Actions tab.
+
+## Windows right-click menus
+
+The ZIP is a portable application. Extract the entire `LunaArc-win-x64` artifact into a permanent folder, then double-click **InstallContextMenu.cmd** once. Alternatively, open LunaArc and click **Install Context Menu**. Registration is per-user and does not require administrator privileges.
+
+Right-click a supported archive to use **LunaArc: Open Archive**, **LunaArc: Extract Here**, or **LunaArc: Extract to Folder**. The last command always creates an archive-named destination, even if the archive already contains a root folder. Files and directories also have **Create .larc Archive** and **Create ZIP Archive** commands. Only one selected item is supported by these commands.
+
+On **Windows 11**, choose **Show more options** to see these classic context-menu entries. This release does not implement the modern Windows 11 `IExplorerCommand` menu. See [Microsoft's File Explorer guide](https://support.microsoft.com/en-gb/windows/experience/fileexplorer/file-explorer-in-windows?nochrome=true).
+
+The menus work independently of the current default ZIP/RAR application. Installing them does not replace that application. Keep the published folder in place: the menu commands refer to those executables. Run **UninstallContextMenu.cmd** before deleting or moving the folder; after moving it, run installation again from the new location. You can also remove menus with `luna-cli unregister-shell`.
 
 ## CLI usage
 
@@ -68,15 +78,17 @@ Cross-publishing Linux binaries on Windows verifies packaging, not Linux executi
 luna-cli list <archive> [-p password]
 luna-cli extract-here <archive> [-o directory] [-p password]
 luna-cli extract-smart <archive> [-p password]
+luna-cli extract-folder <archive> [-p password]
 luna-cli pack-larc <file-or-directory> [-p password]
 luna-cli pack-zip <file-or-directory>
 luna-cli test <archive> [-p password]
 luna-cli register-shell
+luna-cli unregister-shell
 ```
 
 Quote paths containing spaces. Packing creates `<source>.larc` or `<source>.zip`. Extraction currently overwrites matching destination files by default; choose a separate destination when preserving existing files matters. `test` returns a nonzero exit code for an unhealthy archive. Unknown commands and incomplete arguments also fail.
 
-Shell registration is explicit and changes the current user's OS configuration. Run it from the published directory. Windows registration writes per-user Explorer commands and legacy file-association mappings; Windows may still require the user to choose the default app in Settings. Linux registration creates a desktop launcher and Nautilus scripts under `XDG_DATA_HOME` (or `~/.local/share`); it does not automatically set default MIME associations or install Dolphin menus.
+Shell registration is explicit and changes the current user's OS configuration. Run it from the published directory. Windows registers per-extension Explorer verbs through `SystemFileAssociations` and adds LunaArc as an Open With choice without changing existing defaults. It notifies Explorer after installation/removal. Linux registration creates a desktop launcher and Nautilus scripts under `XDG_DATA_HOME` (or `~/.local/share`); it does not automatically set default MIME associations or install Dolphin menus.
 
 ## Formats and current limitations
 
@@ -97,10 +109,11 @@ The current Windows checkout was checked with .NET SDK 8.0.426:
 
 - Debug and Release solution builds passed with zero warnings and zero errors.
 - 63 backend/archive smoke checks passed on Windows.
+- 41 isolated Windows Registry checks verify context-menu registration/removal, executable quoting, existing default applications and other applications' menu entries. They do not modify the real Explorer configuration.
 - Both `win-x64` and `linux-x64` self-contained publishes succeeded.
 - 16 checks passed against the packaged Windows CLI; the packaged GUI remained running during a four-second startup check.
 - Linux output files were checked for ELF signatures. Native Linux execution, Bash-script execution and full desktop UI interactions were not verified locally because this machine has no Linux runtime or connected desktop automation.
 
-The CI workflow is prepared but has not been executed as part of this local task.
+CI results belong to the specific commit/run; review the Actions tab before downloading an artifact.
 
 Build artifacts (`bin`, `obj`, `dist`, `.tools`) are excluded from version control. Project guidance is in [AGENT.md](AGENT.md); implementation and verification notes are in `task/change-logs`.

@@ -151,6 +151,7 @@ try
         await ExpectFailure(() => Task.FromResult(ZipSlipGuard.ValidateAndResolvePath(linkRoot, "escape/hello.txt")), "Existing symlink escape is rejected");
     }
     Console.WriteLine($"PASS: {checks} archive and filesystem checks on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}.");
+    if (OperatingSystem.IsWindows()) WindowsShellChecks.Verify(root);
 }
 finally
 {
