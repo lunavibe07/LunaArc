@@ -1,0 +1,53 @@
+name: Build and verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            runtime: win-x64
+          - os: ubuntu-latest
+            runtime: linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore LunaArc.sln
+      - name: Build Debug
+        run: dotnet build LunaArc.sln -c Debug --no-restore
+      - name: Build Release
+        run: dotnet build LunaArc.sln -c Release --no-restore
+      - name: Archive smoke checks
+        run: dotnet run --project tests/LunaArc.SmokeTests -c Release --no-build
+      - name: Publish Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./installers/build_windows.ps1
+      - name: Publish Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash installers/build_linux.sh
+      - name: Published CLI on Windows
+        if: runner.os == 'Windows'
+        run: ./dist/win-x64/luna-cli.exe help
+      - name: Published CLI on Linux
+        if: runner.os == 'Linux'
+        run: ./dist/linux-x64/luna-cli help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LunaArc-${{ matrix.runtime }}
+          path: dist/${{ matrix.runtime }}/
+          if-no-files-found: error

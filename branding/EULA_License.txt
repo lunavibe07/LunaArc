@@ -1,0 +1,11 @@
+LUNAARC ARCHIVER - END USER LICENSE AGREEMENT (EULA)
+Copyright (c) 2026 LunaArc Software. All rights reserved.
+
+1. PROPRIETARY RIGHTS
+LunaArc Archiver and the ".larc" archive specification are proprietary products of LunaArc Software.
+
+2. THIRD-PARTY OPEN SOURCE NOTICES
+- SharpCompress (MIT License)
+- ZstdSharp.Port (MIT License)
+- Avalonia UI (MIT License)
+- Optional 7-Zip dynamic library 7z.dll / 7z.so (GNU LGPL v2.1 + unRAR license restriction)

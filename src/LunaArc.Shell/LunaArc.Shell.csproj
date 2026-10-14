@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\LunaArc.Core\LunaArc.Core.csproj" />
+  </ItemGroup>
+</Project>

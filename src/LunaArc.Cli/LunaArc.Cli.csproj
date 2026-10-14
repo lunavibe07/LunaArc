@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>luna-cli</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LunaArc.Core\LunaArc.Core.csproj" />
+    <ProjectReference Include="..\LunaArc.Shell\LunaArc.Shell.csproj" />
+  </ItemGroup>
+</Project>

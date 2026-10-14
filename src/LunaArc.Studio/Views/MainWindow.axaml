@@ -1,0 +1,127 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LunaArc.Studio.ViewModels"
+        x:Class="LunaArc.Studio.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="🌙 LunaArc Archiver v1.0 — High-Speed Cross-Platform Studio"
+        Width="1120" Height="680"
+        Background="#0F172A"
+        Foreground="#F8FAFC"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" Margin="14">
+
+        <!-- LunaArc interface -->
+        <Border Grid.Row="0" IsEnabled="{Binding CanStartOperation}" Background="#1E293B" CornerRadius="10" Padding="12" Margin="0,0,0,10">
+            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="📂 Open Archive" Click="OnOpenArchiveClicked"
+                        Background="#4F46E5" Foreground="White" FontWeight="SemiBold" Margin="0,0,8,0" Padding="12,8"/>
+                <Button Content="➕ Create Archive" Click="OnCompressFilesClicked"
+                        Background="#7C3AED" Foreground="White" FontWeight="SemiBold" Margin="0,0,8,0" Padding="12,8"/>
+                <Button Content="📤 Extract To..." Click="OnExtractToClicked"
+                        Background="#0284C7" Foreground="White" FontWeight="SemiBold" Margin="0,0,8,0" Padding="12,8"/>
+                <Button Content="🔍 Test Archive" Command="{Binding TestCurrentArchiveCommand}"
+                        Background="#059669" Foreground="White" FontWeight="SemiBold" Margin="0,0,8,0" Padding="12,8"/>
+                <Button Content="⚙️ Register Shell Menu" Command="{Binding RegisterOsShellMenuCommand}"
+                        Background="#334155" Foreground="#E2E8F0" Margin="0,0,12,0" Padding="12,8"/>
+
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="Format:" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                    <ComboBox SelectedIndex="{Binding SelectedFormatIndex}" Width="115">
+                        <ComboBoxItem Content=".larc (Luna)"/>
+                        <ComboBoxItem Content=".zip (ZIP)"/>
+                        <ComboBoxItem Content=".tar.gz (Linux)"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Level:" VerticalAlignment="Center" Foreground="#94A3B8" Margin="6,0,0,0"/>
+                    <ComboBox SelectedIndex="{Binding SelectedLevelIndex}" Width="125">
+                        <ComboBoxItem Content="0 - Store"/>
+                        <ComboBoxItem Content="1 - Fastest"/>
+                        <ComboBoxItem Content="2 - Fast"/>
+                        <ComboBoxItem Content="3 - Normal"/>
+                        <ComboBoxItem Content="4 - Good"/>
+                        <ComboBoxItem Content="5 - Best"/>
+                    </ComboBox>
+
+                    <TextBox Watermark="🔑 Password (optional, .larc only)"
+                             Text="{Binding PasswordInput}"
+                             PasswordChar="•" Width="190"/>
+                </StackPanel>
+            </WrapPanel>
+        </Border>
+
+        <!-- LunaArc interface -->
+        <Grid Grid.Row="1" IsEnabled="{Binding CanStartOperation}" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,10">
+            <Button Grid.Column="0" Content="⬆️ Up" Command="{Binding GoUpFolderCommand}"
+                    Background="#334155" Foreground="White" Margin="0,0,8,0" Padding="12,6"/>
+            <TextBox Grid.Column="1" Text="{Binding BreadcrumbPath}" IsReadOnly="True"
+                     Background="#1E293B" Foreground="#38BDF8" FontWeight="SemiBold" VerticalContentAlignment="Center"/>
+            <Button Grid.Column="2" Content="👁️ Preview / Open Folder" Command="{Binding OpenOrEnterSelectedItemCommand}"
+                    Background="#334155" Foreground="White" Margin="8,0,0,0" Padding="12,6"/>
+        </Grid>
+
+        <!-- LunaArc interface -->
+        <Grid Grid.Row="2" ColumnDefinitions="3*,1*">
+            <Border Grid.Column="0" Background="#1E293B" CornerRadius="8" Padding="6" Margin="0,0,10,0">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid Grid.Row="0" ColumnDefinitions="40,3*,1.2*,1.2*,0.9*,1*,1.4*" Background="#0F172A" Margin="0,0,0,4">
+                        <TextBlock Grid.Column="0" Text="Type" Padding="6" Foreground="#94A3B8" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="1" Text="Name" Padding="6" Foreground="#94A3B8" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="2" Text="Original Size" Padding="6" Foreground="#94A3B8" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="3" Text="Packed Size" Padding="6" Foreground="#94A3B8" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="4" Text="Saved" Padding="6" Foreground="#94A3B8" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="5" Text="CRC32" Padding="6" Foreground="#94A3B8" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="6" Text="Modified" Padding="6" Foreground="#94A3B8" FontWeight="Bold"/>
+                    </Grid>
+
+                    <ListBox Grid.Row="1"
+                             IsEnabled="{Binding CanStartOperation}"
+                             ItemsSource="{Binding VisibleItems}"
+                             SelectedItem="{Binding SelectedItem}"
+                             DoubleTapped="OnItemDoubleTapped"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:VfsRowItem">
+                                <Grid ColumnDefinitions="40,3*,1.2*,1.2*,0.9*,1*,1.4*">
+                                    <TextBlock Grid.Column="0" Text="{Binding Icon}" HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="#F8FAFC" FontWeight="Medium"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding OriginalSizeDisplay}" Foreground="#CBD5E1"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding CompressedSizeDisplay}" Foreground="#94A3B8"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding RatioDisplay}" Foreground="#38BDF8"/>
+                                    <TextBlock Grid.Column="5" Text="{Binding CrcDisplay}" Foreground="#A78BFA" FontFamily="Consolas,Monospace"/>
+                                    <TextBlock Grid.Column="6" Text="{Binding ModifiedDisplay}" Foreground="#64748B"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- LunaArc interface -->
+            <Border Grid.Column="1" Background="#1E293B" CornerRadius="8" Padding="10">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Grid.Row="0" Text="📝 Archive Comment"
+                               Foreground="#A78BFA" FontWeight="Bold" Margin="0,0,0,8"/>
+                    <TextBox Grid.Row="1" Text="{Binding ArchiveComment}"
+                             AcceptsReturn="True" TextWrapping="Wrap"
+                             Background="#0F172A" Foreground="#E2E8F0"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- LunaArc interface -->
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,10,0,6">
+            <ProgressBar Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}"
+                         Height="22" ShowProgressText="True" Foreground="#6366F1" Background="#1E293B"/>
+            <Button Grid.Column="1" Content="{Binding PauseButtonText}" Command="{Binding TogglePauseJobCommand}"
+                    IsEnabled="{Binding IsBusy}" Background="#D97706" Foreground="White" Margin="8,0,0,0" Padding="12,4"/>
+            <Button Grid.Column="2" Content="🛑 Cancel" Command="{Binding CancelActiveJobCommand}"
+                    IsEnabled="{Binding IsBusy}" Background="#DC2626" Foreground="White" Margin="6,0,0,0" Padding="12,4"/>
+        </Grid>
+
+        <!-- LunaArc interface -->
+        <Border Grid.Row="4" Background="#1E293B" CornerRadius="6" Padding="10,6">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="#38BDF8" FontWeight="Medium"/>
+        </Border>
+    </Grid>
+</Window>
