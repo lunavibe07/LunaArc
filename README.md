@@ -6,14 +6,14 @@ LunaArc is a Windows and Linux archive application built with .NET 8. It include
 
 ## Download
 
-Version **2.2.0** adds **authenticated LARC v2** for password-protected archives and **LunaArc split sets** with automatic assembly/verification from `.001`. Existing v1 remains readable; **older LunaArc versions cannot open v2**. Includes Nocturne Orbit and Windows 11 main-menu setup with explicit certificate consent. Native Windows/Linux builds passed 409/411 archive checks and 176 rendered UI checks per OS, published LARC v2/password/SFX/split-set checks and Windows Setup/Portable lifecycle checks. Download the [published release](https://github.com/lunavibe07/LunaArc/releases/tag/v2.2.0), built from the [verified source run](https://github.com/lunavibe07/LunaArc/actions/runs/38817055273).
+Version **2.3.0** adds estimated free-space checks, progress by phase with measured throughput/ETA, and automatic final-file extraction for `.tar.gz.7z`. Includes authenticated LARC v2, LunaArc split sets, Nocturne Orbit and optional Windows 11 main-menu setup with explicit certificate consent. Native Windows/Linux builds passed 431/433 archive checks and 180 rendered UI checks per OS, published password/SFX/split-set checks and Windows Setup/Portable lifecycle checks. Download the [published release](https://github.com/lunavibe07/LunaArc/releases/tag/v2.3.0), built from the [verified source run](https://github.com/lunavibe07/LunaArc/actions/runs/38822333666).
 
 | Edition | Download | Getting started |
 | --- | --- | --- |
-| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/releases/download/v2.2.0/LunaArc-2.2.0-setup-win-x64.exe) | Run `LunaArc-2.2.0-setup-win-x64.exe` directly. |
-| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/releases/download/v2.2.0/LunaArc-2.2.0-portable-win-x64.zip) | Extract the ZIP into a folder, then run `LunaArc.exe`. |
-| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/releases/download/v2.2.0/LunaArc-2.2.0-linux-x64.tar.gz) | Extract the TAR.GZ into a folder, then start `./LunaArc`. Executable permissions are included. |
-| SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/releases/download/v2.2.0/SHA256SUMS.txt) | Verify the Setup EXE, portable ZIP or Linux TAR.GZ. |
+| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/releases/download/v2.3.0/LunaArc-2.3.0-setup-win-x64.exe) | Run `LunaArc-2.3.0-setup-win-x64.exe` directly. |
+| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/releases/download/v2.3.0/LunaArc-2.3.0-portable-win-x64.zip) | Extract the ZIP into a folder, then run `LunaArc.exe`. |
+| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/releases/download/v2.3.0/LunaArc-2.3.0-linux-x64.tar.gz) | Extract the TAR.GZ into a folder, then start `./LunaArc`. Executable permissions are included. |
+| SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/releases/download/v2.3.0/SHA256SUMS.txt) | Verify the Setup EXE, portable ZIP or Linux TAR.GZ. |
 
 Public Release downloads do not require signing in and are not subject to Actions artifact expiry. Visit [Latest release](https://github.com/lunavibe07/LunaArc/releases/latest) for future versions. Preview builds remain under [Build and verify](https://github.com/lunavibe07/LunaArc/actions/workflows/build.yml); their Actions artifacts require sign-in and expire. Linux Studio requires a graphical desktop and the system libraries listed under [Requirements](#requirements).
 
@@ -80,7 +80,7 @@ From Explorer, version **1.4.6** shows only this dialog and a compact compressio
 
 Version **1.4.0** implements all six archiving options, with format/platform limits shown in General:
 
-Current password behavior (**2.2.0**):
+Current password behavior (**2.3.0**):
 
 | Format | Password protection |
 | --- | --- |
@@ -307,11 +307,11 @@ Shell registration is explicit and changes the current user's OS configuration. 
 The current Windows checkout was checked with .NET SDK 8.0.426:
 
 - Debug and Release solution builds passed with zero warnings and zero errors.
-- 409 backend/archive checks passed on Windows; 411 passed on Ubuntu, including solid/non-solid 7z, SFX footer validation, recovery reconstruction/refusal, cancellation, locks and combined verified source deletion.
+- 431 backend/archive checks passed on Windows; 433 passed on Ubuntu, including solid/non-solid 7z, SFX footer validation, recovery reconstruction/refusal, cancellation, locks and combined verified source deletion.
 - 57 isolated Registry checks verify cascading groups, command order/quoting, default applications, other applications' entries and scoped cleanup without changing Explorer configuration.
-- 176 rendered Studio checks passed locally and on each native CI OS, including split-size bindings/validation and existing encryption, extraction, recovery, Help and responsive views.
-- Version 2.2.0 native Windows/Linux self-contained packages passed published encrypted LARC v2, ZIP/7z, TAR wrapper, split-set CLI, standalone SFX and GUI extraction lifecycle checks. Windows Setup/Portable equality, classic/modern registration, COM activation and scoped cleanup passed.
-- Native Ubuntu 24.04 passed 411 archive/filesystem and 176 rendered UI checks. Native OS file-picker dialogs and full interactive GUI SFX desktop behavior remain outside the automated checks.
+- 180 rendered Studio checks passed locally and on each native CI OS, including split-size bindings/validation and existing encryption, extraction, recovery, Help and responsive views.
+- Version 2.3.0 native Windows/Linux self-contained packages passed published encrypted LARC v2, ZIP/7z, TAR wrapper, split-set CLI, standalone SFX and GUI extraction lifecycle checks. Windows Setup/Portable equality, classic/modern registration, COM activation and scoped cleanup passed.
+- Native Ubuntu 24.04 passed 433 archive/filesystem and 180 rendered UI checks. Native OS file-picker dialogs and full interactive GUI SFX desktop behavior remain outside the automated checks.
 
 CI results belong to the specific commit/run; review the Actions tab before downloading an artifact.
 
