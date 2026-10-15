@@ -16,12 +16,13 @@ inline bool EndsWith(const std::wstring& text, const std::wstring& suffix) {
 }
 inline bool IsArchive(const std::wstring& path) {
     auto lower = Lower(path);
-    for (auto ext : {L".larc", L".rar", L".zip", L".7z", L".tar", L".gz", L".tgz", L".bz2", L".xz"})
+    for (auto ext : {L".larc", L".001", L".rar", L".zip", L".7z", L".tar", L".gz", L".tgz", L".bz2", L".xz"})
         if (EndsWith(lower, ext)) return true;
     return false;
 }
 inline std::wstring FolderName(const std::wstring& path) {
     auto name = path.substr(path.find_last_of(L"\\/") + 1);
+    if (EndsWith(Lower(name), L".001")) name.resize(name.size() - 4);
     auto lower = Lower(name);
     for (auto ext : {L".tar.gz", L".tar.bz2", L".tar.xz"}) {
         if (EndsWith(lower, ext)) return name.substr(0, name.size() - std::wstring(ext).size());

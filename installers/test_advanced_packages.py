@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory(prefix="LunaArc_Published_") as temporary:
 
     # Password creation and two-layer TAR GZip compatibility in actual published packages.
     fake_password = "synthetic-published-暗号"
-    for command, extension in [("pack-zip", ".zip"), ("pack-7z", ".7z"), ("pack-targz", ".tar.gz.7z")]:
+    for command, extension in [("pack-larc", ".larc"), ("pack-zip", ".zip"), ("pack-7z", ".7z"), ("pack-targz", ".tar.gz.7z")]:
         encrypted = root / (command + "-encrypted" + extension)
         run(cli, command, source, "-o", encrypted, "-p", fake_password)
         run(cli, "test", encrypted, "-p", fake_password)
@@ -90,6 +90,21 @@ with tempfile.TemporaryDirectory(prefix="LunaArc_Published_") as temporary:
         run(cli, "make-sfx", encrypted, "-o", cli_sfx, "-p", fake_password)
         run(cli_sfx, "-o", root / (command + "-sfx-decrypted"), "-p", fake_password)
     print("PASS: published AES ZIP/7z and encrypted TAR GZip wrapper creation, wrong passwords and round trips.")
+
+    # Exercise the published CLI's split option and automatic read path.
+    split_source = root / "split-source.bin"
+    split_source.write_bytes(os.urandom(2 * 1024 * 1024 + 73))
+    for command, extension, key in [("pack-larc", ".larc", fake_password), ("pack-zip", ".zip", None)]:
+        split_base = root / ("published-split-" + command + extension)
+        password_args = ["-p", key] if key else []
+        run(cli, command, split_source, "-o", split_base, "--volume-mib", "1", *password_args)
+        first = Path(str(split_base) + ".001")
+        assert first.is_file() and Path(str(split_base) + ".lunasplit.json").is_file()
+        run(cli, "test", first, *password_args)
+        split_out = root / ("split-output-" + command)
+        run(cli, "extract-here", first, "-o", split_out, *password_args)
+        assert hashlib.sha256((split_out / split_source.name).read_bytes()).digest() == hashlib.sha256(split_source.read_bytes()).digest()
+    print("PASS: published LARC v2 passwords/SFX and numbered split-set CLI round trips.")
 
     # A full GUI extractor is also built and verified without opening an OS window.
     gui_sfx = root / ("gui-extractor.exe" if os.name == "nt" else "gui-extractor.run")

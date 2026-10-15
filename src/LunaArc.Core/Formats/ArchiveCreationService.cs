@@ -12,7 +12,8 @@ public static class ArchiveCreationService
         string? sfxStub = null, Action<long, long, string>? progress = null)
     {
         string output = Path.GetFullPath(options.OutputArchivePath);
-        if (options.SplitVolumeSizeBytes.HasValue) throw new NotSupportedException("This creation workflow does not support split volumes.");
+        if (options.SplitVolumeSizeBytes is { } volume && (volume < 65536 || sfx || recovery || locked || options.DeleteSourceAfterArchiving))
+            throw new ArgumentException("Split sets require at least 64 KiB per part and cannot combine with SFX, recovery records, locks or source deletion.");
         if (options.Format == OutputArchiveFormat.EncryptedTarGz && options.DeleteSourceAfterArchiving)
             throw new NotSupportedException("Source deletion is not supported for the nested TAR GZip encryption wrapper. Sources were preserved.");
         ArchiveLock.EnsureWritable(output);
@@ -41,9 +42,14 @@ public static class ArchiveCreationService
                 OutputArchivePath = temporary, Format = options.Format, Level = options.Level, Password = options.Password,
                 ArchiveComment = options.ArchiveComment, SolidArchive = options.SolidArchive
             }, job, progress);
-            bool verify = test || cleanup != null || sfx || recovery;
+            bool verify = test || cleanup != null || sfx || recovery || options.SplitVolumeSizeBytes.HasValue;
             if (verify && !(await backend.TestArchiveAsync(temporary, options.Password, job)).IsHealthy)
                 throw new InvalidDataException("Archive verification failed. Sources were preserved.");
+            if (options.SplitVolumeSizeBytes is { } size)
+            {
+                await SplitArchive.CreateAsync(temporary, output, size, job);
+                return "Created verified split set. Open " + SplitArchive.FirstPart(output) + ". Keep all numbered parts and the .lunasplit.json manifest together.";
+            }
             string finalStage = temporary;
             if (sfx)
             {

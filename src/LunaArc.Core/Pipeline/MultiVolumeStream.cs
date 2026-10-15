@@ -35,8 +35,8 @@ public sealed class MultiVolumeOutputStream : Stream
         string ext = Path.GetExtension(_baseFilePath);
         string partPath = Path.Combine(dir, $"{nameNoExt}.part{_currentPartIndex:D3}{ext}");
 
+        _currentStream = new FileStream(partPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024);
         _createdParts.Add(partPath);
-        _currentStream = new FileStream(partPath, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024);
     }
 
     public override void Write(byte[] buffer, int offset, int count)

@@ -8,6 +8,10 @@ public static class ArchivePasswordDetection
 {
     public static async Task<bool> RequiresPasswordAsync(string archivePath, CancellationToken ct = default)
     {
+        using var job = new LunaArc.Core.Pipeline.LunaJobController(); using var cancellation = ct.Register(job.Cancel);
+        using var split = await SplitArchive.OpenAsync(archivePath, job);
+        if (split != null) return await RequiresPasswordAsync(split.Path, ct);
+        if (AuthenticatedLarc.IsFile(archivePath)) { await AuthenticatedLarc.CheckHeaderAsync(archivePath, ct); return true; }
         using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, ct);
         if (sfx != null) return await RequiresPasswordAsync(sfx.Path, ct);
         if (LarcNativeHandler.IsLarcFile(archivePath))

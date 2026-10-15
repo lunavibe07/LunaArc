@@ -145,7 +145,7 @@ public partial class MainWindow : Window
             {
                 new FilePickerFileType("Supported archives")
                 {
-                    Patterns = new[] { "*.larc", "*.rar", "*.7z", "*.zip", "*.tar", "*.gz", "*.bz2", "*.xz" }
+                    Patterns = new[] { "*.larc", "*.001", "*.rar", "*.7z", "*.zip", "*.tar", "*.gz", "*.bz2", "*.xz" }
                 }
             }
         });

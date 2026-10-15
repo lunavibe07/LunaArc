@@ -40,11 +40,13 @@ public static class Program
                 throw new ArgumentException($"Command '{command}' requires a file or directory path.");
             for (int i = 2; !scopedUnregister && i < args.Length; i += 2)
             {
-                if (args[i] is not ("-p" or "-o" or "--solid" or "--sfx" or "--recovery" or "--lock") || i + 1 >= args.Length)
+                if (args[i] is not ("-p" or "-o" or "--solid" or "--sfx" or "--recovery" or "--lock" or "--volume-mib") || i + 1 >= args.Length)
                     throw new ArgumentException("Options require values: -p <password>, -o <output>, --solid/--sfx/--recovery/--lock <on|off>.");
                 if (args[i] == "-o" && command is not ("extract-here" or "x" or "pack-larc" or "pack-zip" or "pack-7z" or "pack-targz" or "make-sfx" or "repair"))
                     throw new ArgumentException("This command does not accept an output option.");
-                if (args[i].StartsWith("--", StringComparison.Ordinal) &&
+                if (args[i] == "--volume-mib" && (!command.StartsWith("pack-", StringComparison.Ordinal) || !long.TryParse(args[i + 1], out long mib) || mib < 1 || mib > 1048576))
+                    throw new ArgumentException("--volume-mib requires a pack command and a whole size from 1 to 1,048,576 MiB.");
+                if (args[i] != "--volume-mib" && args[i].StartsWith("--", StringComparison.Ordinal) &&
                     (!command.StartsWith("pack-", StringComparison.Ordinal) || args[i + 1] is not ("on" or "off")))
                     throw new ArgumentException("Archiving flags require a pack command and an on/off value.");
             }
@@ -117,7 +119,8 @@ public static class Program
                     string result = await ArchiveCreationService.CreateAsync(new[] { source }, new CompressOptions
                     {
                         OutputArchivePath = output, Format = format, Password = GetOptionValue(args, "-p"),
-                        SolidArchive = GetOptionValue(args, "--solid") == "on"
+                        SolidArchive = GetOptionValue(args, "--solid") == "on",
+                        SplitVolumeSizeBytes = GetOptionValue(args, "--volume-mib") is { } volume ? long.Parse(volume) * 1024 * 1024 : null
                     }, controller, sfx, GetOptionValue(args, "--recovery") == "on", GetOptionValue(args, "--lock") == "on", test: true);
                     Console.WriteLine(result + " " + Path.GetFullPath(output));
                     break;
@@ -253,6 +256,7 @@ public static class Program
     private static string GetArchiveFolderName(string archivePath)
     {
         string name = Path.GetFileName(archivePath);
+        if (name.EndsWith(".001", StringComparison.OrdinalIgnoreCase)) name = name[..^4];
         foreach (string extension in new[] { ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst" })
             if (name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return name[..^extension.Length];
         return Path.GetFileNameWithoutExtension(name);
@@ -268,6 +272,7 @@ public static class Program
         Console.WriteLine("  luna-cli extract-here <archive> [-o directory]  : Extract archive");
         Console.WriteLine("  luna-cli extract-smart <archive> [-p password] : Extract into a suitable folder");
         Console.WriteLine("  luna-cli extract-folder <archive> [-p password]: Always extract into an archive-named folder");
+        Console.WriteLine("  Pack options: --volume-mib <MiB> creates a LunaArc split set; open .001 with its manifest.");
         Console.WriteLine("  luna-cli pack-larc <source> [-p password]       : Create a .larc archive");
         Console.WriteLine("  luna-cli pack-zip <source> [-p password] : Create ZIP (WinZip AES-256 with password)");
         Console.WriteLine("  luna-cli pack-7z <source> [-p password] [--solid on] : Create 7z (AES-256 with encrypted names)");

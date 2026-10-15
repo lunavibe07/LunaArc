@@ -37,6 +37,11 @@
           <ComboBoxItem Content="Normal"/><ComboBoxItem Content="Good"/><ComboBoxItem Content="Best"/>
          </ComboBox>
         </StackPanel>
+      <StackPanel IsVisible="{Binding IsCreation}" Spacing="4">
+       <TextBlock Text="Split to volumes, size (MiB)"/>
+       <TextBox Name="SplitSizeBox" Text="{Binding SplitSizeMiB}" Watermark="Leave blank for a single archive"/>
+       <TextBlock Text="Open .001; keep every part and its manifest. Requires temporary disk space." TextWrapping="Wrap" FontSize="11"/>
+      </StackPanel>
         <TextBlock Text="{Binding FormatNote}" TextWrapping="Wrap" Foreground="#BDBDBD"/>
         <TextBlock Text="Deletion is off by default. It forces testing and uses temporary extraction space. Changed or unarchived sources are kept." Foreground="#BDBDBD" TextWrapping="Wrap"/>
        </StackPanel>
@@ -52,9 +57,9 @@
           <CheckBox Name="DeleteSourceAfterArchivingBox" Content="Delete files after archiving" IsChecked="{Binding DeleteSourceAfterArchiving}" IsEnabled="{Binding CanDeleteSources}" ToolTip.Tip="Requires archive and source-content verification. Applies to this creation only. Unavailable for the nested TAR GZip encryption wrapper."/>
           <CheckBox Name="CreateSfxBox" Content="Create SFX archive" IsChecked="{Binding CreateSfx}" IsEnabled="{Binding CanCreateSfx}" ToolTip.Tip="Self-contained extractor for the current OS/architecture. Available in published packages. Adds the LunaArc executable size."/>
           <CheckBox Name="CreateSolidBox" Content="Create solid archive" IsChecked="{Binding SolidArchive}" IsEnabled="{Binding CanUseSolid}" ToolTip.Tip="Select 7z. Compresses files together using LZMA2."/>
-          <CheckBox Name="RecoveryRecordBox" Content="Add recovery record" IsChecked="{Binding AddRecoveryRecord}" IsEnabled="{Binding IsCreation}" ToolTip.Tip="Creates a .lrec companion. Repairs one damaged 1 MiB block per group of 16 blocks. Keep it beside the archive."/>
+          <CheckBox Name="RecoveryRecordBox" Content="Add recovery record" IsChecked="{Binding AddRecoveryRecord}" IsEnabled="{Binding CanUseCompanions}" ToolTip.Tip="Creates a .lrec companion. Repairs one damaged 1 MiB block per group of 16 blocks. Keep it beside the archive."/>
           <CheckBox Name="TestCreatedArchiveBox" Content="Test archived files" IsChecked="{Binding TestCreatedArchive}" IsEnabled="{Binding CanToggleTest}" ToolTip.Tip="Testing is required when deleting source files."/>
-          <CheckBox Name="LockArchiveBox" Content="Lock archive" IsChecked="{Binding LockArchive}" IsEnabled="{Binding IsCreation}" ToolTip.Tip="Creates a .lunalock companion and marks the archive read-only. Advisory protection in LunaArc, not encryption. Unlock using Tools."/>
+          <CheckBox Name="LockArchiveBox" Content="Lock archive" IsChecked="{Binding LockArchive}" IsEnabled="{Binding CanUseCompanions}" ToolTip.Tip="Creates a .lunalock companion and marks the archive read-only. Advisory protection in LunaArc, not encryption. Unlock using Tools."/>
           <TextBlock Text="Solid: 7z only. SFX: published package, current OS. Keep .lrec / .lunalock companions. These are LunaArc features, not RAR records." TextWrapping="Wrap" Foreground="#BDBDBD" FontSize="11" Margin="0,6,0,0"/>
          </StackPanel>
         </Border>

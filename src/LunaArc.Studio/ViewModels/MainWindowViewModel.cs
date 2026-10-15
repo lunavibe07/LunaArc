@@ -69,6 +69,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _solidArchive;
     [ObservableProperty] private bool _addRecoveryRecord;
     [ObservableProperty] private bool _lockArchive;
+    public long? SplitVolumeSizeBytes { get; set; }
 
     public bool CanEncrypt => SelectedFormatIndex == 0;
 
@@ -358,6 +359,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public async Task CompressFilesToArchiveAsync(IReadOnlyList<string> sourcePaths, string outputArchivePath)
     {
+        long? splitSize = SplitVolumeSizeBytes; SplitVolumeSizeBytes = null;
         bool deleteSources = DeleteSourceAfterArchiving, sfx = CreateSfx, recovery = AddRecoveryRecord, locked = LockArchive;
         DeleteSourceAfterArchiving = CreateSfx = AddRecoveryRecord = LockArchive = false;
         if (IsBusy) return;
@@ -375,11 +377,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 OutputArchivePath = outputArchivePath, Format = format,
                 Level = (LunaCompressionLevel)Math.Clamp(SelectedLevelIndex, 0, 5),
                 Password = PasswordInput.Length == 0 ? null : PasswordInput, ArchiveComment = ArchiveComment,
-                SolidArchive = SolidArchive, DeleteSourceAfterArchiving = deleteSources
+                SolidArchive = SolidArchive, DeleteSourceAfterArchiving = deleteSources, SplitVolumeSizeBytes = splitSize
             }, _activeJob, sfx, recovery, locked, TestCreatedArchive,
                 progress: (done, total, file) => UpdateProgress(done, total, $"Compressing: {file}")));
             ProgressPercent = 100;
-            await OpenArchiveFileAsync(outputArchivePath);
+            await OpenArchiveFileAsync(splitSize.HasValue ? SplitArchive.FirstPart(outputArchivePath) : outputArchivePath);
             StatusMessage = result + " " + outputArchivePath;
         }
         catch (OperationCanceledException) { StatusMessage = "Compression cancelled. Remaining sources were kept."; }

@@ -107,6 +107,17 @@ internal static class Program
             Task createZip = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.AddZip, compressionSource));
             Dispatcher.UIThread.RunJobs();
             var zipOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
+            zipOptions.FindControl<TextBox>("SplitSizeBox")!.Text = "1";
+            Dispatcher.UIThread.RunJobs();
+            Check(zipOptions.Options.SplitVolumeSizeBytes == 1024 * 1024 && !zipOptions.Options.CanUseCompanions && !zipOptions.Options.CanDeleteSources,
+                "Split-size control binds a one-operation volume size and disables incompatible options");
+            Capture(zipOptions, "split-general.png");
+            zipOptions.Options.SplitSizeMiB = "invalid";
+            Check(!zipOptions.Options.Validate(), "Split-size validation rejects nonnumeric input");
+            zipOptions.Options.SplitSizeMiB = "0";
+            Check(!zipOptions.Options.Validate(), "Split-size validation rejects zero");
+            zipOptions.Options.SplitSizeMiB = "";
+            Check(zipOptions.Options.CanUseCompanions && zipOptions.Options.SplitVolumeSizeBytes == null, "Clearing split size restores single-archive options");
             Check(zipOptions.FindControl<CheckBox>("DeleteSourceAfterArchivingBox")!.IsChecked == false, "Source deletion defaults off for every creation");
             Check(new[] { "RecoveryRecordBox", "LockArchiveBox" }.All(name =>
                 zipOptions.FindControl<CheckBox>(name) is { IsEnabled: true, IsChecked: false }), "Recovery and lock are enabled and default off");

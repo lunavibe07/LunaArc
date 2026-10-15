@@ -10,7 +10,7 @@ namespace LunaArc.Shell.Windows;
 [SupportedOSPlatform("windows")]
 public sealed class WinRegistryMenu : IOsShellRegistrar
 {
-    private static readonly string[] SupportedExtensions = { ".larc", ".rar", ".zip", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz" };
+    private static readonly string[] SupportedExtensions = { ".larc", ".001", ".rar", ".zip", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz" };
     private readonly RegistryKey? _testClasses;
 
     public WinRegistryMenu() { }

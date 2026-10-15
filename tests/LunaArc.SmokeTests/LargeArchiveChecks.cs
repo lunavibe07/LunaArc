@@ -21,7 +21,7 @@ internal static class LargeArchiveChecks
         {
             string archive = Path.Combine(root, $"stream-{store}-{encrypted}.larc");
             using var job = new LunaJobController();
-            await backend.CompressAsync(new[] { source }, new CompressOptions { OutputArchivePath = archive,
+            await new LarcNativeHandler().CreateLarcArchiveAsync(new[] { source }, new CompressOptions { OutputArchivePath = archive,
                 Password = encrypted ? password : null, Level = store ? LunaCompressionLevel.Store : LunaCompressionLevel.Normal }, job);
             // Original v1 byte-array decoding independently validates new stream framing and CBC layout.
             using var input = File.OpenRead(archive); input.Position = 9;

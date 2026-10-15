@@ -48,7 +48,7 @@ public sealed class StandaloneCompressionSession : IDisposable
                 Level = (LunaCompressionLevel)Math.Clamp(settings.SelectedLevelIndex, 0, 5),
                 Password = settings.PasswordInput.Length == 0 ? null : settings.PasswordInput,
                 ArchiveComment = settings.ArchiveComment, SolidArchive = settings.SolidArchive,
-                DeleteSourceAfterArchiving = settings.DeleteSourceAfterArchiving
+                DeleteSourceAfterArchiving = settings.DeleteSourceAfterArchiving, SplitVolumeSizeBytes = settings.SplitVolumeSizeBytes
             };
             string result = await Task.Run(() => ArchiveCreationService.CreateAsync(new[] { request.Path }, options, job,
                 settings.CreateSfx, settings.AddRecoveryRecord, settings.LockArchive, settings.TestCreatedArchive,

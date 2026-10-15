@@ -18,6 +18,11 @@ public sealed class StandardArchiveHandler : IArchiveBackend
 
     public async Task<FlatVfsArena> ReadCatalogAsync(string archivePath, string? password = null, CancellationToken ct = default)
     {
+        using var job = new LunaJobController(); using var cancellation = ct.Register(job.Cancel);
+        using var split = await SplitArchive.OpenAsync(archivePath, job);
+        if (split != null) return await ReadCatalogAsync(split.Path, password, ct);
+        using var authenticated = await AuthenticatedLarc.OpenAsync(archivePath, password, job);
+        if (authenticated != null) return await _larcHandler.ReadCatalogAsync(authenticated.Path, authenticated: true);
         using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, ct);
         if (sfx != null) return await ReadCatalogAsync(sfx.Path, password, ct);
         if (archivePath.EndsWith(".larc", StringComparison.OrdinalIgnoreCase) || LarcNativeHandler.IsLarcFile(archivePath))
@@ -59,6 +64,10 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         LunaJobController controller,
         Action<long, long, string>? onProgress = null)
     {
+        using var split = await SplitArchive.OpenAsync(archivePath, controller);
+        if (split != null) { await ExtractAsync(split.Path, options, controller, onProgress); return; }
+        using var authenticated = await AuthenticatedLarc.OpenAsync(archivePath, options.Password, controller);
+        if (authenticated != null) { await ExtractAsync(authenticated.Path, options, controller, onProgress); return; }
         using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, controller.Token);
         if (sfx != null) { await ExtractAsync(sfx.Path, options, controller, onProgress); return; }
         string targetRoot = options.DestinationDirectory;
@@ -174,6 +183,7 @@ public sealed class StandardArchiveHandler : IArchiveBackend
     {
         controller.Token.ThrowIfCancellationRequested();
         ArchiveLock.EnsureWritable(options.OutputArchivePath);
+        if (options.SplitVolumeSizeBytes.HasValue) throw new ArgumentException("Use ArchiveCreationService for verified LunaArc split sets.");
         if (File.Exists(options.OutputArchivePath) || Directory.Exists(options.OutputArchivePath))
             throw new IOException("The archive destination already exists. Choose a new output path.");
         if (options.SolidArchive && options.Format != OutputArchiveFormat.SevenZip)
@@ -197,7 +207,14 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         }
         if (options.Format == OutputArchiveFormat.LarcNative)
         {
-            await _larcHandler.CreateLarcArchiveAsync(sourcePaths, options, controller, onProgress);
+            if (string.IsNullOrEmpty(options.Password)) await _larcHandler.CreateLarcArchiveAsync(sourcePaths, options, controller, onProgress);
+            else
+            {
+                using var plain = new TemporaryArchive(".larc");
+                await _larcHandler.CreateLarcArchiveAsync(sourcePaths, new CompressOptions { OutputArchivePath = plain.Path,
+                    Level = options.Level, ArchiveComment = options.ArchiveComment }, controller, onProgress);
+                await AuthenticatedLarc.EncryptAsync(plain.Path, options.OutputArchivePath, options.Password, controller);
+            }
         }
         else if (options.Format == OutputArchiveFormat.Zip)
         {
@@ -341,6 +358,14 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         LunaJobController controller,
         Action<int, int, string>? onProgress = null)
     {
+        using var split = await SplitArchive.OpenAsync(archivePath, controller);
+        if (split != null) return await TestArchiveAsync(split.Path, password, controller, onProgress);
+        TemporaryArchive? authenticated;
+        try { authenticated = await AuthenticatedLarc.OpenAsync(archivePath, password, controller); }
+        catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or InvalidDataException or UnauthorizedAccessException)
+        { return new ArchiveTestResult(1, 0, 1, new List<string> { ex.Message }); }
+        using (authenticated)
+            if (authenticated != null) return await TestArchiveAsync(authenticated.Path, null, controller, onProgress);
         int total = 0;
         using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, controller.Token);
         if (sfx != null) return await TestArchiveAsync(sfx.Path, password, controller, onProgress);

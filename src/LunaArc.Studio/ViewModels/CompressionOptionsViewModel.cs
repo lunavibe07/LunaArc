@@ -16,7 +16,17 @@ public partial class CompressionOptionsViewModel : ObservableObject
     [ObservableProperty] private bool _solidArchive;
     [ObservableProperty] private bool _addRecoveryRecord;
     [ObservableProperty] private bool _lockArchive;
-    public bool CanCreateSfx => IsCreation && LunaArc.Core.Formats.SfxArchive.CanCreate;
+    [ObservableProperty] private string _splitSizeMiB = string.Empty;
+    public bool HasSplit => !string.IsNullOrWhiteSpace(SplitSizeMiB);
+    public bool CanUseCompanions => IsCreation && !HasSplit;
+    public long? SplitVolumeSizeBytes => HasSplit ? checked(long.Parse(SplitSizeMiB) * 1024 * 1024) : null;
+    partial void OnSplitSizeMiBChanged(string value)
+    {
+        if (HasSplit) { CreateSfx = AddRecoveryRecord = LockArchive = DeleteSourceAfterArchiving = false; TestCreatedArchive = true; }
+        OnPropertyChanged(nameof(CanUseCompanions)); OnPropertyChanged(nameof(CanCreateSfx)); OnPropertyChanged(nameof(CanDeleteSources));
+        Status = string.Empty;
+    }
+    public bool CanCreateSfx => CanUseCompanions && LunaArc.Core.Formats.SfxArchive.CanCreate;
     public bool CanUseSolid => IsSevenZip;
     public bool IsSevenZip { get => SelectedFormatIndex == 3; set { if (value) SelectedFormatIndex = 3; } }
     [ObservableProperty]
@@ -39,11 +49,11 @@ public partial class CompressionOptionsViewModel : ObservableObject
     public bool IsZip { get => SelectedFormatIndex == 1; set { if (value) SelectedFormatIndex = 1; } }
     public bool IsTarGzip { get => SelectedFormatIndex == 2; set { if (value) SelectedFormatIndex = 2; } }
     public bool CanComment => SelectedFormatIndex is 0 or 1;
-    public bool CanDeleteSources => IsCreation && !(IsTarGzip && PasswordInput.Length > 0);
+    public bool CanDeleteSources => IsCreation && !HasSplit && !(IsTarGzip && PasswordInput.Length > 0);
     public string Extension => CreateSfx ? (OperatingSystem.IsWindows() ? ".exe" : ".run") : PayloadExtension;
     private string PayloadExtension => SelectedFormatIndex switch { 1 => ".zip", 2 when PasswordInput.Length > 0 => ".tar.gz.7z", 2 => ".tar.gz", 3 => ".7z", _ => ".larc" };
-    public string FormatNote => IsLarc ? "LARC supports password encryption of names and contents."
-        : IsZip ? "ZIP supports WinZip AES-256 passwords and comments. File names remain visible. ZIP64 supports large files and many entries; split encryption is unsupported."
+    public string FormatNote => IsLarc ? "LARC passwords use authenticated AES-256-GCM v2, including file names. Older LunaArc versions cannot open v2; v1 remains readable."
+        : IsZip ? "ZIP supports WinZip AES-256 passwords and comments. File names remain visible. ZIP64 supports large files and many entries. Volume splitting uses LunaArc numbered parts plus a manifest."
         : IsSevenZip ? "7z supports AES-256 passwords with encrypted file names and solid LZMA2 compression. Encoding needs the packaged 7-Zip tool and staging space. Pause applies before/after encoding; Cancel stops it."
         : "With a password, creates .tar.gz.7z: an AES-256 encrypted 7z containing one TAR GZip. Extract twice. Source deletion is unavailable for this wrapper.";
     public string PasswordSummary => PasswordInput.Length == 0 ? "No password set" : "Password set";
@@ -101,6 +111,10 @@ public partial class CompressionOptionsViewModel : ObservableObject
     {
         try
         {
+            if (HasSplit && (!IsCreation || !long.TryParse(SplitSizeMiB, out long mib) || mib < 1 || mib > 1048576))
+                throw new ArgumentException("Split size must be a whole number from 1 to 1,048,576 MiB. Leave blank for one archive.");
+            if (HasSplit && (CreateSfx || AddRecoveryRecord || LockArchive || DeleteSourceAfterArchiving))
+                throw new ArgumentException("Split sets cannot combine with SFX, recovery, lock or source deletion.");
             if (SelectedFormatIndex is < 0 or > 3 || SelectedLevelIndex is < 0 or > 5)
                 throw new ArgumentException("Choose a supported format and compression method.");
             if ((IsSevenZip || IsTarGzip) && PasswordInput.Length > 0 && (PasswordInput.Length > 1024 || PasswordInput.IndexOfAny(new[] { '\r', '\n', '\0' }) >= 0))
@@ -113,6 +127,8 @@ public partial class CompressionOptionsViewModel : ObservableObject
             if (System.Text.Encoding.UTF8.GetByteCount(ArchiveComment) > 65535) throw new ArgumentException("The archive comment must fit within 65,535 UTF-8 bytes.");
             if (IsCreation)
             {
+                if (HasSplit && (File.Exists(ArchiveName + ".001") || File.Exists(ArchiveName + ".lunasplit.json")))
+                    throw new IOException("A split set already uses that name. Choose a new archive name.");
                 if (!ArchiveName.EndsWith(Extension, StringComparison.OrdinalIgnoreCase))
                     throw new ArgumentException($"Use the {Extension} extension for the selected format.");
                 ArchiveName = ValidateOutputPath(ArchiveName, SourcePaths);
@@ -153,5 +169,6 @@ public partial class CompressionOptionsViewModel : ObservableObject
         settings.SolidArchive = SolidArchive;
         settings.AddRecoveryRecord = IsCreation && AddRecoveryRecord;
         settings.LockArchive = IsCreation && LockArchive;
+        settings.SplitVolumeSizeBytes = IsCreation ? SplitVolumeSizeBytes : null;
     }
 }

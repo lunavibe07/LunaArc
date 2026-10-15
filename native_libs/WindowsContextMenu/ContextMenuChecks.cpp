@@ -30,6 +30,8 @@ int wmain(int argc, wchar_t** argv) {
     HMODULE library = nullptr;
     bool created = false;
     try {
+        Check(IsArchive(L"Sample.zip.001"), "First split part offers archive commands");
+        Check(FolderName(L"Sample.tar.gz.001") == L"Sample", "Split extraction folder omits compound extensions");
         if (std::filesystem::exists(directory)) throw std::runtime_error("Test directory already exists; refusing reuse");
         created = std::filesystem::create_directory(directory);
         if (!created) throw std::runtime_error("Could not create test directory");

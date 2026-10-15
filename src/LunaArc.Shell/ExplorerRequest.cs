@@ -27,6 +27,7 @@ public sealed record ExplorerRequest(ExplorerAction Action, string Path)
     public static string GetFolderName(string path)
     {
         string name = System.IO.Path.GetFileName(path);
+        if (name.EndsWith(".001", StringComparison.OrdinalIgnoreCase)) name = name[..^4];
         foreach (string extension in new[] { ".tar.gz", ".tar.bz2", ".tar.xz" })
             if (name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return name[..^extension.Length];
         string result = System.IO.Path.GetFileNameWithoutExtension(name);

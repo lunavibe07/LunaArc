@@ -41,7 +41,7 @@ public sealed class LarcNativeHandler
         return header.SequenceEqual(MagicBytes);
     }
 
-    public async Task<FlatVfsArena> ReadCatalogAsync(string archivePath, string? password = null)
+    public async Task<FlatVfsArena> ReadCatalogAsync(string archivePath, string? password = null, bool authenticated = false)
     {
         await using var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         var (header, isEncrypted, _) = await ReadHeaderInternalAsync(fs, password);
@@ -60,7 +60,7 @@ public sealed class LarcNativeHandler
                 e.Crc32,
                 new DateTime(e.LastModifiedUtcTicks, DateTimeKind.Utc),
                 e.IsDir,
-                isEncrypted);
+                isEncrypted || authenticated);
         }
 
         return arena;
