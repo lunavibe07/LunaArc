@@ -2,6 +2,7 @@
 **/obj/
 dist/
 .tools/
+task/
 .vs/
 *.user
 *.suo

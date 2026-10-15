@@ -195,4 +195,4 @@ The current Windows checkout was checked with .NET SDK 8.0.426:
 
 CI results belong to the specific commit/run; review the Actions tab before downloading an artifact.
 
-Build artifacts (`bin`, `obj`, `dist`, `.tools`) are excluded from version control. Project guidance is in [AGENT.md](AGENT.md); implementation and verification notes are in `task/change-logs`.
+Build artifacts (`bin`, `obj`, `dist`, `.tools`) and local task notes (`task`) are excluded from version control. Project guidance is in [AGENT.md](AGENT.md).
