@@ -42,6 +42,7 @@ try
             ArchiveComment = format == OutputArchiveFormat.LarcNative ? "Smoke fixture" : null
         }, job);
         var catalog = await backend.ReadCatalogAsync(archive, password);
+        Check(await ArchivePasswordDetection.RequiresPasswordAsync(archive) == (password != null), $"{format}: encryption detection follows archive metadata");
         Check(catalog.TotalUncompressedBytes == Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories)
             .Sum(p => new FileInfo(p).Length), $"{format}: catalog size");
 
@@ -60,6 +61,11 @@ try
         Check(result.IsHealthy && result.TotalFilesTested == 4 && result.PassedFiles == 4, $"{format}: integrity test");
         if (password != null)
         {
+            string detectorStub = Path.Combine(root, "password-detector-stub");
+            File.WriteAllText(detectorStub, "Synthetic non-executable stub");
+            string encryptedSfx = Path.Combine(root, $"encrypted-{checks}.sfx");
+            await SfxArchive.CreateAsync(detectorStub, archive, encryptedSfx, format);
+            Check(await ArchivePasswordDetection.RequiresPasswordAsync(encryptedSfx), "SFX: encrypted LARC payload requires password input");
             await ExpectFailure(() => backend.ReadCatalogAsync(archive, "wrong-password"), "Wrong password is rejected");
             Check(!(await backend.TestArchiveAsync(archive, "wrong-password", job)).IsHealthy, "Wrong password fails archive test");
             Check(!await PasswordRecovery.VerifyArchiveAsync(backend, archive, null, default), "Locked catalog needs a password");
@@ -88,6 +94,7 @@ try
     await ExpectFailure(() => Task.FromResult(LunaArc.Shell.ExplorerRequest.Parse(new[] { "--shell-open", root, "extra" })), "Explorer command rejects extra arguments");
     foreach (string name in new[] { "encrypted.zip", "encrypted-aes.zip", "encrypted.7z" })
     {
+        Check(await ArchivePasswordDetection.RequiresPasswordAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", name)), $"{name}: encrypted metadata enables password input");
         string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
         Check(!await PasswordRecovery.VerifyArchiveAsync(backend, fixture, null, default), name + ": cannot unlock without a password");
         Check(!await PasswordRecovery.VerifyArchiveAsync(backend, fixture, "wrong-password", default), name + ": wrong password rejected");
@@ -103,6 +110,7 @@ try
     string emptySource = Path.Combine(root, "empty-source");
     foreach (string name in new[] { "Rar.encrypted_filesOnly.rar", "Rar.encrypted_filesAndHeader.rar", "Rar5.encrypted_filesOnly.rar", "Rar5.encrypted_filesAndHeader.rar" })
     {
+        Check(await ArchivePasswordDetection.RequiresPasswordAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", name)), $"{name}: encryption detected even with locked headers");
         string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
         Check(!await PasswordRecovery.VerifyArchiveAsync(backend, fixture, null, default), name + ": cannot unlock without a password");
         Check(!await PasswordRecovery.VerifyArchiveAsync(backend, fixture, "wrong-password", default), name + ": wrong password rejected");
@@ -119,6 +127,7 @@ try
         await backend.CompressAsync(new[] { emptySource }, new CompressOptions
         { OutputArchivePath = emptyArchive, Format = OutputArchiveFormat.LarcNative, Password = "empty-fixture" }, emptyJob);
         Check(await PasswordRecovery.VerifyArchiveAsync(backend, emptyArchive, "empty-fixture", default), "Encrypted empty LARC is verified from the header flag");
+        Check(await ArchivePasswordDetection.RequiresPasswordAsync(emptyArchive), "Encrypted empty LARC still requires its header password");
         string storedArchive = Path.Combine(root, "stored-unencrypted.larc");
         await backend.CompressAsync(new[] { source }, new CompressOptions
         { OutputArchivePath = storedArchive, Format = OutputArchiveFormat.LarcNative, Level = LunaCompressionLevel.Store }, emptyJob);
@@ -267,6 +276,7 @@ try
     string badLarc = Path.Combine(root, "bad-header.larc");
     File.WriteAllBytes(badLarc, "LUNAARC\u0001"u8.ToArray().Concat(new byte[] { 0, 255, 255, 255, 127 }).ToArray());
     await ExpectFailure(() => backend.ReadCatalogAsync(badLarc), "Oversized .larc header is rejected before allocation");
+    await ExpectFailure(() => ArchivePasswordDetection.RequiresPasswordAsync(badLarc), "Damaged LARC header is an error, not an encryption prompt");
 
     if (OperatingSystem.IsLinux())
     {

@@ -10,14 +10,13 @@ public sealed record ExtractionChoice(string Destination, string Password, Overw
     ExtractionUpdateMode UpdateMode = ExtractionUpdateMode.ExtractAndReplace, bool KeepBrokenFiles = false);
 public partial class ExtractOptionsWindow : Window
 {
-    public ExtractOptionsWindow()
+    public ExtractOptionsWindow() : this(string.Empty, false) { }
+    public ExtractOptionsWindow(string destination, bool requiresPassword = false)
     {
         InitializeComponent();
-        DataContext = new ExtractionOptionsViewModel(string.Empty);
+        DataContext = new ExtractionOptionsViewModel(destination, requiresPassword);
         Closed += (_, _) => { Vm.Dispose(); this.FindControl<TextBox>("ExtractionPasswordBox")!.Text = string.Empty; };
     }
-    public ExtractOptionsWindow(string destination) : this() =>
-        Vm.Destination = destination;
     private ExtractionOptionsViewModel Vm => (ExtractionOptionsViewModel)DataContext!;
     private void OnDestinationFocused(object? sender, Avalonia.Input.GotFocusEventArgs e)
     {

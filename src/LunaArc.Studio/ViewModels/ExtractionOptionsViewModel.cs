@@ -31,6 +31,7 @@ public partial class ExtractionOptionsViewModel : ObservableObject, IDisposable
         }
     }
     [ObservableProperty] private string _password = string.Empty;
+    public bool RequiresPassword { get; }
     [ObservableProperty] private bool _showPassword;
     [ObservableProperty] private bool _displayAfterExtraction;
     [ObservableProperty] private bool _keepBrokenFiles;
@@ -59,8 +60,9 @@ public partial class ExtractionOptionsViewModel : ObservableObject, IDisposable
     public bool FreshenExisting { get => UpdateMode == ExtractionUpdateMode.FreshenExisting; set { if (value) UpdateMode = ExtractionUpdateMode.FreshenExisting; } }
     public char PasswordCharacter => ShowPassword ? '\0' : '●';
 
-    public ExtractionOptionsViewModel(string destination)
+    public ExtractionOptionsViewModel(string destination, bool requiresPassword = false)
     {
+        RequiresPassword = requiresPassword;
         Destination = destination;
         AddFolder("Home", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
         AddFolder("Desktop", Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));

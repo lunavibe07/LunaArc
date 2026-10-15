@@ -37,6 +37,7 @@ internal static class AdvancedArchivingChecks
         string sfx = Path.Combine(folder, "synthetic.sfx");
         await SfxArchive.CreateAsync(stub, zip, sfx, OutputArchiveFormat.Zip);
         check(SfxArchive.IsSfx(sfx) && (await backend.TestArchiveAsync(sfx, null, job)).IsHealthy, "SFX: versioned footer and payload verification");
+        check(!await ArchivePasswordDetection.RequiresPasswordAsync(sfx), "SFX: plain payload does not request a password");
         var catalog = await backend.ReadCatalogAsync(sfx);
         check(catalog.TotalUncompressedBytes == (await backend.ReadCatalogAsync(zip)).TotalUncompressedBytes, "SFX: catalog matches embedded ZIP");
         string extracted = Path.Combine(folder, "sfx-extracted");
@@ -103,6 +104,7 @@ internal static class AdvancedArchivingChecks
             using var process = Process.Start(info)!; string listing = await process.StandardOutput.ReadToEndAsync(); await process.WaitForExitAsync();
             check(process.ExitCode == 0 && listing.Contains(solid ? "Solid = +" : "Solid = -"), $"7z: independent encoder confirms solid={solid}");
             check((await backend.TestArchiveAsync(seven, null, job)).IsHealthy, $"7z: managed decoder verifies solid={solid}");
+            check(!await ArchivePasswordDetection.RequiresPasswordAsync(seven), $"7z: solid={solid} is not confused with encryption");
             string sevenOutput = seven + "-extracted"; await backend.ExtractAsync(seven, new ExtractOptions { DestinationDirectory = sevenOutput }, job);
             check(File.ReadAllText(Path.Combine(sevenOutput, "sources", "two.txt")) == text + "Two" && File.Exists(Path.Combine(sevenOutput, "sources", "日本語.txt")), $"7z: Unicode and solid={solid} extraction round trip");
         }

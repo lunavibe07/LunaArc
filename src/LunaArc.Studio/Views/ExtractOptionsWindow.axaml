@@ -102,7 +102,7 @@
      <TextBlock Grid.Row="3" Name="ExtractionValidation" Text="{Binding Status}" TextWrapping="Wrap" Foreground="#FFD18B" Margin="0,10,0,0"/>
     </Grid>
    </TabItem>
-   <TabItem Header="Password">
+   <TabItem Name="ExtractionPasswordTab" Header="Password" IsVisible="{Binding RequiresPassword}">
     <StackPanel Margin="14" Spacing="10">
      <TextBlock Text="Archive password" FontSize="16" FontWeight="SemiBold"/>
      <TextBlock Text="Enter the password supplied with the archive. Leave blank to use the password already unlocked for this archive." TextWrapping="Wrap" Foreground="#BDBDBD"/>

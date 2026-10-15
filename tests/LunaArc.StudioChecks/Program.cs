@@ -260,7 +260,7 @@ internal static class Program
             vaultVm.ClearSecrets();
 
             Task extraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
-            Dispatcher.UIThread.RunJobs();
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || extraction.IsCompleted));
             var extractionOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
             Check(extractionOptions.FindControl<RadioButton>("SkipExistingBox")!.IsChecked == true, "Explorer extraction defaults to preserving existing files");
             Check(extractionOptions.FindControl<RadioButton>("ExtractAndReplaceRadio")!.IsChecked == true, "Update mode defaults to extracting all eligible files");
@@ -304,21 +304,35 @@ internal static class Program
             var invalidFolder = extractionVm.CreateFolderAsync("../escape");
             Pump(invalidFolder);
             Check(!invalidFolder.Result, "New folder rejects multi-segment names");
-            extractionOptions.FindControl<TabControl>("ExtractionTabs")!.SelectedIndex = 1;
-            extractionOptions.FindControl<CheckBox>("ShowExtractionPasswordBox")!.IsChecked = true;
-            Dispatcher.UIThread.RunJobs();
-            Check(extractionOptions.FindControl<TextBox>("ExtractionPasswordBox")!.PasswordChar == '\0', "Password tab can reveal the entered password");
-            Capture(extractionOptions, "extract-password.png");
-            extractionOptions.FindControl<CheckBox>("ShowExtractionPasswordBox")!.IsChecked = false;
-            extractionOptions.FindControl<TabControl>("ExtractionTabs")!.SelectedIndex = 0;
+            Check(!extractionOptions.FindControl<TabItem>("ExtractionPasswordTab")!.IsVisible, "Unencrypted archive hides the Password tab");
+            Capture(extractionOptions, "extract-no-password.png");
             string chosenDestination = Path.Combine(temporary, "chosen extraction folder");
             extractionOptions.FindControl<TextBox>("DestinationBox")!.Text = chosenDestination;
             Click(extractionOptions.FindControl<Button>("StartExtractionButton")!);
             Pump(extraction);
             Check(File.Exists(Path.Combine(chosenDestination, "readme.md")), "Extract files command honors the chosen folder");
 
-            Task renameExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
+            Task protectedExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, larcOutput));
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || protectedExtraction.IsCompleted));
+            var protectedOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            Check(protectedOptions.FindControl<TabItem>("ExtractionPasswordTab")!.IsVisible, "Header-encrypted LARC shows Password before its catalog can be opened");
+            string protectedDestination = Path.Combine(temporary, "password-required-output");
+            protectedOptions.FindControl<TextBox>("DestinationBox")!.Text = protectedDestination;
+            protectedOptions.FindControl<TabControl>("ExtractionTabs")!.SelectedIndex = 1;
+            protectedOptions.FindControl<TextBox>("ExtractionPasswordBox")!.Text = "synthetic-created-password";
+            protectedOptions.FindControl<CheckBox>("ShowExtractionPasswordBox")!.IsChecked = true;
             Dispatcher.UIThread.RunJobs();
+            Check(protectedOptions.FindControl<TextBox>("ExtractionPasswordBox")!.PasswordChar == '\0', "Visible Password tab can reveal the supplied password");
+            Capture(protectedOptions, "extract-password.png");
+            Click(protectedOptions.FindControl<Button>("StartExtractionButton")!);
+            Pump(protectedExtraction);
+            Check(File.Exists(Path.Combine(protectedDestination, Path.GetFileName(compressionSource))) && !vm.IsBusy,
+                "Entering a password in the conditional tab unlocks and extracts header-encrypted LARC");
+            Check(protectedOptions.FindControl<TextBox>("ExtractionPasswordBox")!.Text == string.Empty, "Closing conditional Password clears its secret");
+            Pump(vm.OpenArchiveFileAsync(archivePath));
+
+            Task renameExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || renameExtraction.IsCompleted));
             var renameOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
             renameOptions.FindControl<TextBox>("DestinationBox")!.Text = chosenDestination;
             renameOptions.FindControl<RadioButton>("RenameRadio")!.IsChecked = true;
@@ -337,7 +351,7 @@ internal static class Program
             File.WriteAllText(Path.Combine(freshenDestination, "readme.md"), "Old copy");
             File.SetLastWriteTimeUtc(Path.Combine(freshenDestination, "readme.md"), new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
             Task freshenExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
-            Dispatcher.UIThread.RunJobs();
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || freshenExtraction.IsCompleted));
             var freshenOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
             freshenOptions.FindControl<TextBox>("DestinationBox")!.Text = freshenDestination;
             freshenOptions.FindControl<RadioButton>("FreshenExistingRadio")!.IsChecked = true;
@@ -357,7 +371,7 @@ internal static class Program
             Directory.CreateDirectory(askDestination);
             File.WriteAllText(Path.Combine(askDestination, "readme.md"), "Keep original");
             Task askExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
-            Dispatcher.UIThread.RunJobs();
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || askExtraction.IsCompleted));
             var askOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
             askOptions.FindControl<TextBox>("DestinationBox")!.Text = askDestination;
             askOptions.FindControl<RadioButton>("AskOverwriteRadio")!.IsChecked = true;
@@ -371,7 +385,7 @@ internal static class Program
             Pump(askExtraction);
             Check(File.ReadAllText(Path.Combine(askDestination, "readme.md")) == "Keep original" && !vm.IsBusy, "Conflict Skip preserves the original and restores idle state");
             Task cancelConflictExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
-            Dispatcher.UIThread.RunJobs();
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || cancelConflictExtraction.IsCompleted));
             var cancelConflictOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
             cancelConflictOptions.FindControl<TextBox>("DestinationBox")!.Text = askDestination;
             cancelConflictOptions.FindControl<RadioButton>("AskOverwriteRadio")!.IsChecked = true;
@@ -395,7 +409,7 @@ internal static class Program
             Directory.CreateDirectory(brokenDestination);
             File.WriteAllText(Path.Combine(brokenDestination, "payload.txt"), "Preserve existing destination");
             Task brokenExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, corruptZip));
-            Dispatcher.UIThread.RunJobs();
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || brokenExtraction.IsCompleted));
             var brokenOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
             brokenOptions.FindControl<TextBox>("DestinationBox")!.Text = brokenDestination;
             brokenOptions.FindControl<RadioButton>("OverwriteAllRadio")!.IsChecked = true;
@@ -408,6 +422,7 @@ internal static class Program
                 "Keep broken files flows from General to extraction, retains failed data separately and preserves the destination");
             Pump(vm.OpenArchiveFileAsync(archivePath));
             Click(window.FindControl<Button>("ExtractButton")!);
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any()));
             Check(window.OwnedWindows.Single() is ExtractOptionsWindow, "Toolbar Extract To uses the same extraction dialog");
             Click(((ExtractOptionsWindow)window.OwnedWindows.Single()).FindControl<Button>("CancelExtractionButton")!);
             File.WriteAllText(Path.Combine(temporary, "notes.txt"), "Existing notes must survive");
@@ -417,7 +432,7 @@ internal static class Program
             Pump(window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.ExtractFolder, archivePath)));
             Check(File.Exists(Path.Combine(temporary, "Sample archive", "readme.md")), "Extract to folder creates the archive-named destination");
             Task cancelledExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
-            Dispatcher.UIThread.RunJobs();
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || cancelledExtraction.IsCompleted));
             var cancelledOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
             cancelledOptions.FindControl<TextBox>("ExtractionPasswordBox")!.Text = "synthetic-cancelled-secret";
             Click(cancelledOptions.FindControl<Button>("CancelExtractionButton")!);
@@ -452,8 +467,9 @@ internal static class Program
             Pump(vm.ExtractCurrentArchiveToAsync(Path.Combine(temporary, "recovered-output")));
             Check(Directory.GetFiles(Path.Combine(temporary, "recovered-output"), "message.txt", SearchOption.AllDirectories).Length == 1, "Recovered session password is used for extraction");
             Task recoveredDialogExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, vm.CurrentArchivePath));
-            Dispatcher.UIThread.RunJobs();
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any() || recoveredDialogExtraction.IsCompleted));
             var recoveredOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            Check(recoveredOptions.FindControl<TabItem>("ExtractionPasswordTab")!.IsVisible, "Encrypted ZIP retains an optional Password tab after unlocking the archive session");
             string recoveredDialogDestination = Path.Combine(temporary, "recovered-dialog-output");
             recoveredOptions.FindControl<TextBox>("DestinationBox")!.Text = recoveredDialogDestination;
             Click(recoveredOptions.FindControl<Button>("StartExtractionButton")!);

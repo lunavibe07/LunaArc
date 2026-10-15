@@ -44,7 +44,9 @@ public sealed class StandardArchiveHandler : IArchiveBackend
                     (uint)entry.Crc,
                     entry.LastModifiedTime,
                     entry.IsDirectory,
-                    entry.IsEncrypted);
+                    // SharpCompress 0.50.5 reports 7z empty entries without a data
+                    // folder as encrypted (nullable coder lookup). They have no payload.
+                    archive.Type == ArchiveType.SevenZip && entry.Size == 0 ? false : entry.IsEncrypted);
             }
 
             return arena;

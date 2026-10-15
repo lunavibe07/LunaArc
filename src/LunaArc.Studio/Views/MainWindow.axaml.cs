@@ -23,7 +23,7 @@ public partial class MainWindow : Window
     {
         if (Vm == null) return;
         string destination = Path.Combine(Path.GetDirectoryName(executable)!, Path.GetFileNameWithoutExtension(executable) + "-extracted");
-        var choice = await new ExtractOptionsWindow(destination).ShowDialog<ExtractionChoice?>(this);
+        var choice = await ShowExtractionOptionsAsync(destination, executable);
         if (choice != null && await Vm.OpenArchiveFileAsync(executable, choice.Password.Length > 0 ? choice.Password : null))
             await RunExtractionAsync(choice);
     }
@@ -74,12 +74,12 @@ public partial class MainWindow : Window
             if (request.Action == ExplorerAction.Open) { await Vm.OpenArchiveFileAsync(request.Path); return; }
             ExtractionChoice? choice = null;
             if (request.Action == ExplorerAction.Extract)
-                choice = await new ExtractOptionsWindow(request.ExtractionDirectory).ShowDialog<ExtractionChoice?>(this);
+                choice = await ShowExtractionOptionsAsync(request.ExtractionDirectory, request.Path);
             else
             {
                 await Vm.OpenArchiveFileAsync(request.Path);
                 if (Vm.CurrentArchivePath != request.Path || Vm.HasEncryptedEntries)
-                    choice = await new ExtractOptionsWindow(request.ExtractionDirectory).ShowDialog<ExtractionChoice?>(this);
+                    choice = await ShowExtractionOptionsAsync(request.ExtractionDirectory, request.Path);
                 else choice = new(request.ExtractionDirectory, string.Empty, OverwriteMode.SkipExisting);
             }
             if (choice == null) { Vm.StatusMessage = "Extraction cancelled."; return; }
@@ -116,11 +116,30 @@ public partial class MainWindow : Window
     private async void OnExtractToClicked(object? sender, RoutedEventArgs e)
     {
         if (Vm == null || !Vm.CanUseArchive) return;
-        string destination = Path.Combine(Path.GetDirectoryName(Vm.CurrentArchivePath)!, ExplorerRequest.GetFolderName(Vm.CurrentArchivePath));
-        var choice = await new ExtractOptionsWindow(destination).ShowDialog<ExtractionChoice?>(this);
-        if (choice == null) return;
-        if (choice.Password.Length > 0 && !await Vm.OpenArchiveFileAsync(Vm.CurrentArchivePath, choice.Password)) return;
-        await RunExtractionAsync(choice);
+        try
+        {
+            string destination = Path.Combine(Path.GetDirectoryName(Vm.CurrentArchivePath)!, ExplorerRequest.GetFolderName(Vm.CurrentArchivePath));
+            var choice = await ShowExtractionOptionsAsync(destination, Vm.CurrentArchivePath);
+            if (choice == null) return;
+            if (choice.Password.Length > 0 && !await Vm.OpenArchiveFileAsync(Vm.CurrentArchivePath, choice.Password)) return;
+            await RunExtractionAsync(choice);
+        }
+        catch (Exception ex) { Vm.StatusMessage = "Could not prepare extraction: " + ex.Message; }
+    }
+
+    private async Task<ExtractionChoice?> ShowExtractionOptionsAsync(string destination, string archivePath)
+    {
+        if (Vm == null) return null;
+        Vm.IsBusy = true;
+        bool requiresPassword;
+        try
+        {
+            Vm.StatusMessage = "Checking archive encryption...";
+            requiresPassword = await Task.Run(() => LunaArc.Core.Security.ArchivePasswordDetection.RequiresPasswordAsync(archivePath));
+        }
+        finally { Vm.IsBusy = false; }
+        Vm.StatusMessage = "Choose extraction options.";
+        return await new ExtractOptionsWindow(destination, requiresPassword).ShowDialog<ExtractionChoice?>(this);
     }
 
     private async Task RunExtractionAsync(ExtractionChoice choice)

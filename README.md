@@ -97,13 +97,13 @@ extractor.exe -o ./destination
 
 ## Extract files
 
-The dark extraction dialog includes a folder tree and **General / Password** tabs in both Setup and Portable editions. Update mode, Overwrite mode and Miscellaneous use compact classic group frames with small radio/check controls, matching familiar archive-manager layouts. All three update policies are listed below.
+The dark extraction dialog includes a folder tree and **General** in both Setup and Portable editions. The **Password** tab appears only for an encrypted archive, including archives with encrypted names/headers; ordinary archives hide it. Encryption is detected from archive metadata before showing the dialog. Read/format/access errors remain errors rather than being treated as password protection. Update mode, Overwrite mode and Miscellaneous use compact classic group frames with small radio/check controls, matching familiar archive-manager layouts. All three update policies are listed below.
 
 1. Open an archive and select **Extract To**, or right-click an archive in Windows Explorer and choose **LunaArc > Extract files...**. On Windows 11, the classic menu may be under **Show more options**.
 2. In **General**, enter a full destination path, select a folder in the tree, or use **Browse...**. Long paths have a compact preview such as `C:\…\Downloads\Archive` when unfocused; click the field to see and edit the full path, or hover to view it. The actual extraction destination is never shortened. The extraction window uses a compact layout. Expand a tree item to load its subfolders.
 3. Use **New folder** to create a folder inside the current destination. A destination that does not yet exist is created during extraction.
 4. Select an **Update mode** to choose eligible files, then an **Overwrite mode** to handle eligible conflicts. **Extract and replace files** and **Skip existing files** are the defaults. Select **Ask before overwrite** or **Overwrite without prompt** when you want to update older copies.
-5. For an encrypted archive, enter its password in the **Password** tab. Leave it blank to reuse the password already unlocked for this archive. **Show password** reveals the input; closing the dialog clears it.
+5. For an encrypted archive, the **Password** tab becomes available; enter its password there. Leave it blank to reuse the password already unlocked for this archive. **Show password** reveals the input; closing the dialog clears it.
 6. Under **Miscellaneous**, optionally select **Keep broken files** to retain available failed output under a unique `.broken-<id>` name. This works with ZIP, LARC and SharpCompress extraction; TAR does not retain partial output. Existing destination files are preserved on failure, and cancellation does not retain partial files. **Display files in Explorer** (Windows) / **Display files in file manager** (Linux) opens the destination only after successful extraction.
 7. Select **OK** to start, **Cancel** to close the options, or **Help** for a short explanation of the controls.
 
@@ -271,7 +271,7 @@ The current Windows checkout was checked with .NET SDK 8.0.426:
 - Debug and Release solution builds passed with zero warnings and zero errors.
 - 291 backend/archive checks passed on Windows; 293 passed on Ubuntu, including solid/non-solid 7z, SFX footer validation, recovery reconstruction/refusal, cancellation, locks and combined verified source deletion.
 - 57 isolated Registry checks verify cascading groups, command order/quoting, default applications, other applications' entries and scoped cleanup without changing Explorer configuration.
-- 98 rendered Studio checks passed locally, including General option bindings, 7z creation, recovery/lock companions, explicit unlock and exact-hash repair.
+- 103 rendered Studio checks passed locally, including General option bindings, 7z creation, recovery/lock companions, explicit unlock and exact-hash repair.
 - The version 1.4.0 `win-x64` managed-only self-contained publish succeeded. Published ZIP/LARC/7z CLI SFX files ran independently; recovery and lock/unlock checks passed. Complete Windows setup/menu packaging is verified separately by CI.
 - Native Ubuntu 24.04 build, 293 backend checks, 98 rendered UI checks and published standalone SFX execution passed in CI for version 1.4.2. Native OS file-picker dialogs and full GUI SFX desktop interaction remain outside the headless checks.
 
