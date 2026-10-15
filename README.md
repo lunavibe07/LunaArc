@@ -42,6 +42,7 @@ Version **1.4.5** replaces the logo with the supplied moon-and-sun infinity artw
 - **Find** / **F3** filters names in the current folder without changing archive contents. Size columns sort by numeric byte counts.
 - **Info** shows the current archive path, folder/file summary and available comment. **Options** opens compression/password settings; cancelling restores the previous settings.
 - **File** includes close archive and exit; **Tools** contains context-menu installation. **Ctrl+O** opens an archive.
+- **Help > Home page (GitHub)** opens [the LunaArc repository](https://github.com/lunavibe07/LunaArc) in your default browser. **Help > About LunaArc** displays the application version and logo.
 
 The interface lists archive contents; it is not a general system-drive file browser. Tools includes repair using a LunaArc .lrec companion and explicit lock/unlock. Archive entry editing is not implemented. Both installed and portable Windows editions have this same interface. Toolbar artwork comes from Microsoft Fluent UI System Icons; its MIT notice is included in every published folder.
 

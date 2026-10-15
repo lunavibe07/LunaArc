@@ -210,6 +210,19 @@ public partial class MainWindow : Window
             "\n\nComment:\n" + (string.IsNullOrWhiteSpace(Vm.ArchiveComment) ? "No comment." : Vm.ArchiveComment));
     }
 
+    private async void OnHomePageClicked(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (!await Launcher.LaunchUriAsync(new Uri("https://github.com/lunavibe07/LunaArc")) && Vm != null)
+                Vm.StatusMessage = "Could not open the project home page. Visit https://github.com/lunavibe07/LunaArc";
+        }
+        catch (Exception ex)
+        {
+            if (Vm != null) Vm.StatusMessage = "Could not open the project home page: " + ex.Message;
+        }
+    }
+
     private async void OnAboutClicked(object? sender, RoutedEventArgs e) =>
         await ShowInformationAsync("About LunaArc", "LunaArc Archiver",
             $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}\nArchive manager for Windows and Linux.\n\nCreate .larc, ZIP and TAR GZip archives.\nBrowse, extract and test existing archives.\n\nToolbar icons: Microsoft Fluent UI System Icons (MIT).\nCopyright 2026 LunaSi Software.", showLogo: true);
