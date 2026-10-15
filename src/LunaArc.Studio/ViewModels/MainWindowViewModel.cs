@@ -344,7 +344,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             outputArchivePath = CompressionOptionsViewModel.ValidateOutputPath(outputArchivePath, sourcePaths);
             StatusMessage = "Creating archive and requested companion files...";
-            var format = SelectedFormatIndex switch { 1 => OutputArchiveFormat.Zip, 2 => OutputArchiveFormat.TarGz,
+            var format = SelectedFormatIndex switch { 1 => OutputArchiveFormat.Zip, 2 when PasswordInput.Length > 0 => OutputArchiveFormat.EncryptedTarGz, 2 => OutputArchiveFormat.TarGz,
                 3 => OutputArchiveFormat.SevenZip, _ => OutputArchiveFormat.LarcNative };
             string result = await Task.Run(() => ArchiveCreationService.CreateAsync(sourcePaths, new CompressOptions
             {

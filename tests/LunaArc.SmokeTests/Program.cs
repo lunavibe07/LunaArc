@@ -22,6 +22,7 @@ try
     await ExtractionUpdateChecks.RunAsync(root, backend, Check);
     await VerifiedSourceCleanupChecks.RunAsync(root, backend, Check);
     await AdvancedArchivingChecks.RunAsync(root, Check);
+    await EncryptedCreationChecks.RunAsync(root, Check);
 
     foreach (var (format, extension, password, level) in new[]
     {
@@ -235,8 +236,8 @@ try
         await ExpectFailure(() => backend.CompressAsync(new[] { source }, new CompressOptions
         { OutputArchivePath = Path.Combine(root, "unsupported.tar.zst"), Format = OutputArchiveFormat.TarZst }, job), "Unsupported TAR Zstandard output is rejected");
         await ExpectFailure(() => backend.CompressAsync(new[] { source }, new CompressOptions
-        { OutputArchivePath = Path.Combine(root, "password.zip"), Format = OutputArchiveFormat.Zip, Password = "fixture" }, job), "Unsupported ZIP encryption is rejected");
-        Check(!File.Exists(Path.Combine(root, "password.zip")), "Rejected encryption creates no archive");
+        { OutputArchivePath = Path.Combine(root, "password.tar.gz"), Format = OutputArchiveFormat.TarGz, Password = "fixture" }, job), "Native TAR GZip encryption is rejected");
+        Check(!File.Exists(Path.Combine(root, "password.tar.gz")), "Rejected TAR encryption creates no archive");
         await ExpectFailure(() => backend.CompressAsync(new[] { source }, new CompressOptions
         { OutputArchivePath = Path.Combine(source, "self.zip"), Format = OutputArchiveFormat.Zip }, job), "Archive output inside source is rejected");
     }

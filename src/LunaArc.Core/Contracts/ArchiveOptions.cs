@@ -44,7 +44,8 @@ public enum OutputArchiveFormat
     Zip,            // .zip
     TarGz,          // .tar.gz
     TarZst,         // .tar.zst
-    SevenZip       // .7z; external pinned 7-Zip encoder, managed decoding
+    SevenZip,      // .7z; external pinned 7-Zip encoder, managed decoding
+    EncryptedTarGz // .tar.gz.7z; an encrypted 7z containing one ordinary TAR GZip
 }
 
 public sealed class ExtractOptions

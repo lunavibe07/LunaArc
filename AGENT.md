@@ -21,14 +21,14 @@ Read relevant source before editing. Source and project files define current beh
 - `branding`: logo and EULA; `native_libs`: optional-library notes, not an implemented native adapter.
 - `.github/workflows/build.yml`: native Windows/Linux verification and artifact publishing in CI.
 
-Current dependencies: SharpCompress 0.50.5, ZstdSharp.Port 0.8.1, Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Check `.csproj` for the actual versions. Upgrade only when needed by the task and verify affected APIs and archive fixtures.
+Current dependencies: SharpCompress 0.50.5, SharpZipLib 1.4.2 (encrypted ZIP writing), ZstdSharp.Port 0.8.1, Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Check `.csproj` for the actual versions. Upgrade only when needed by the task and verify affected APIs and archive fixtures.
 
 ## Current behavior and limits
 
 - `StandardArchiveHandler` is shared by CLI and Studio. Standard TAR/TAR GZip processing uses `TarArchiveHandler` and .NET TAR APIs; other standard formats use SharpCompress.
 - `.larc` contains magic `LUNAARC\x01`, flags, compressed JSON metadata and individual payloads. It is not a TAR wrapper. Passwords currently encrypt both header and payload.
 - .larc creation buffers whole files. The 64 KiB streaming pipeline does not establish bounded memory for every format.
-- ZIP/TAR GZip output reject passwords; `TarZst` creation is unsupported and fails explicitly. `EncryptHeader` is not an independent behavior. Solid compression is supported only for new 7z output, through a separate pinned 7-Zip 26.04 encoder.
+- ZIP password creation uses WinZip AES-256 through SharpZipLib and independent SharpCompress/authentication verification; filenames remain visible. Encrypted ZIP64/split creation is rejected; source data is limited to 3 GiB. 7z password creation uses AES-256 with encrypted headers through the pinned encoder; pass secrets via redirected UTF-8 stdin, never arguments or files. Passwords cannot include CR/LF/NUL and are limited to 1024 characters for 7z. TAR GZip has no native encryption: the appended EncryptedTarGz format creates an encrypted 7z containing one normal TAR GZip (.tar.gz.7z), requiring two extraction steps; source deletion is unavailable for that nested wrapper. Preserve existing enum values and LARC v1. `TarZst` remains unsupported. Solid compression is 7z-only; `EncryptHeader` is not an independent option.
 - SFX v1 uses a self-contained published GUI/CLI executable plus a bounded, SHA-256 checked archive overlay. It targets the current OS/architecture and never auto-runs extracted files. LARC v1 remains unchanged.
 - `.lrec` recovery v1 is a separate bounded block-map/XOR-parity format, not RAR or PAR2: one damaged 1 MiB block per group of 16. Repair verifies the full original hash and writes a new output. `.lunalock` is an advisory companion plus read-only attribute, not encryption or an access-control boundary. Preserve companions and explicit unlock semantics.
 - Multi-volume output exists, but reading split outputs is not implemented.

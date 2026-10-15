@@ -27,6 +27,7 @@ done
 if [[ "$runtime" == linux-* ]]; then chmod +x "$publish_dir/LunaArc" "$publish_dir/luna-cli"; fi
 cp "$project_root/branding/EULA_License.txt" "$project_root/README.md" "$publish_dir/"
 cp "$project_root/branding/Fluent_Icons_LICENSE.txt" "$publish_dir/"
+cp "$project_root/branding/SharpZipLib_LICENSE.txt" "$publish_dir/"
 cp "$project_root/branding/app_logo_256.png" "$publish_dir/LunaArc.png"
 if [[ "$runtime" == linux-* ]]; then
   bash "$project_root/installers/prepare_sevenzip.sh" "$publish_dir"

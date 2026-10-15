@@ -31,6 +31,7 @@ try {
     }
     Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/EULA_License.txt') -Destination $publishDir
     Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/Fluent_Icons_LICENSE.txt') -Destination $publishDir
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/SharpZipLib_LICENSE.txt') -Destination $publishDir
     Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $publishDir
     Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/app_logo_256.png') -Destination (Join-Path $publishDir 'LunaArc.png')
     & (Join-Path $PSScriptRoot 'prepare_sevenzip.ps1') -OutputDirectory $publishDir -Runtime $Runtime

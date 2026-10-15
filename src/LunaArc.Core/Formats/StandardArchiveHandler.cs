@@ -183,8 +183,8 @@ public sealed class StandardArchiveHandler : IArchiveBackend
             throw new ArgumentException("Every source must be an existing file or directory.");
         if (options.Format == OutputArchiveFormat.TarZst)
             throw new NotSupportedException("TAR Zstandard output is not implemented. Use .tar.gz or .larc.");
-        if (options.Format != OutputArchiveFormat.LarcNative && !string.IsNullOrEmpty(options.Password))
-            throw new NotSupportedException("Password-protected output is supported for .larc only.");
+        if (options.Format == OutputArchiveFormat.TarGz && !string.IsNullOrEmpty(options.Password))
+            throw new NotSupportedException("TAR GZip has no native password encryption. Choose ZIP, 7z or LARC.");
         if (!Enum.IsDefined(options.Format)) throw new ArgumentOutOfRangeException(nameof(options.Format));
         string output = Path.GetFullPath(options.OutputArchivePath);
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
@@ -201,11 +201,17 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         }
         else if (options.Format == OutputArchiveFormat.Zip)
         {
-            await CreateZipArchiveAsync(sourcePaths, options, controller, onProgress);
+            if (!string.IsNullOrEmpty(options.Password))
+                await EncryptedZipEncoder.CreateAsync(sourcePaths, options, controller, onProgress);
+            else await CreateZipArchiveAsync(sourcePaths, options, controller, onProgress);
         }
         else if (options.Format == OutputArchiveFormat.SevenZip)
         {
             await SevenZipEncoder.CreateAsync(sourcePaths, options, controller);
+        }
+        else if (options.Format == OutputArchiveFormat.EncryptedTarGz)
+        {
+            await EncryptedTarGzEncoder.CreateAsync(sourcePaths, options, controller, onProgress);
         }
         else
         {

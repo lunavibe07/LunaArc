@@ -49,7 +49,7 @@
         <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
          <StackPanel>
           <TextBlock Text="Archiving options" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <CheckBox Name="DeleteSourceAfterArchivingBox" Content="Delete files after archiving" IsChecked="{Binding DeleteSourceAfterArchiving}" IsEnabled="{Binding IsCreation}" ToolTip.Tip="Requires archive and source-content verification. Applies to this creation only."/>
+          <CheckBox Name="DeleteSourceAfterArchivingBox" Content="Delete files after archiving" IsChecked="{Binding DeleteSourceAfterArchiving}" IsEnabled="{Binding CanDeleteSources}" ToolTip.Tip="Requires archive and source-content verification. Applies to this creation only. Unavailable for the nested TAR GZip encryption wrapper."/>
           <CheckBox Name="CreateSfxBox" Content="Create SFX archive" IsChecked="{Binding CreateSfx}" IsEnabled="{Binding CanCreateSfx}" ToolTip.Tip="Self-contained extractor for the current OS/architecture. Available in published packages. Adds the LunaArc executable size."/>
           <CheckBox Name="CreateSolidBox" Content="Create solid archive" IsChecked="{Binding SolidArchive}" IsEnabled="{Binding CanUseSolid}" ToolTip.Tip="Select 7z. Compresses files together using LZMA2."/>
           <CheckBox Name="RecoveryRecordBox" Content="Add recovery record" IsChecked="{Binding AddRecoveryRecord}" IsEnabled="{Binding IsCreation}" ToolTip.Tip="Creates a .lrec companion. Repairs one damaged 1 MiB block per group of 16 blocks. Keep it beside the archive."/>

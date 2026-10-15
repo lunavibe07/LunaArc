@@ -26,7 +26,7 @@ public static class SfxArchive
     public static async Task CreateAsync(string stub, string archive, string output, OutputArchiveFormat format, CancellationToken ct = default)
     {
         LunaArc.Core.Security.ArchiveLock.EnsureWritable(output);
-        if (format is not (OutputArchiveFormat.LarcNative or OutputArchiveFormat.Zip or OutputArchiveFormat.TarGz or OutputArchiveFormat.SevenZip))
+        if (format is not (OutputArchiveFormat.LarcNative or OutputArchiveFormat.Zip or OutputArchiveFormat.TarGz or OutputArchiveFormat.SevenZip or OutputArchiveFormat.EncryptedTarGz))
             throw new NotSupportedException("Unsupported SFX payload format.");
         if (IsSfx(stub)) throw new InvalidDataException("An SFX cannot be used as an extractor stub.");
         bool created = false;
@@ -75,7 +75,7 @@ public static class SfxArchive
         string extension = (OutputArchiveFormat)BinaryPrimitives.ReadInt32LittleEndian(footer.AsSpan(24)) switch
         {
             OutputArchiveFormat.LarcNative => ".larc", OutputArchiveFormat.Zip => ".zip",
-            OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.SevenZip => ".7z",
+            OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.SevenZip or OutputArchiveFormat.EncryptedTarGz => ".7z",
             _ => throw new InvalidDataException("Unsupported SFX payload format.")
         };
         if (offset <= 0 || length <= 0 || offset > input.Length - FooterSize || length != input.Length - FooterSize - offset ||

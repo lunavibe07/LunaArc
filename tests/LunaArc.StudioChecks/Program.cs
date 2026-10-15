@@ -161,8 +161,7 @@ internal static class Program
             Click(passwordAccept);
             Check(larcOptions.Options.PasswordInput == "synthetic-created-password" && passwordFields.All(field => field.Text == string.Empty), "Accepted password belongs to the compression draft and child inputs are cleared");
             larcOptions.FindControl<RadioButton>("ZipFormatRadio")!.IsChecked = true;
-            Click(larcOptions.FindControl<Button>("AcceptOptionsButton")!);
-            Check(larcOptions.Options.Status.Contains("LARC") && window.OwnedWindows.Contains(larcOptions), "General rejects unsupported password-protected ZIP creation");
+            Check(larcOptions.Options.Validate() && window.OwnedWindows.Contains(larcOptions), "General accepts password-protected ZIP creation");
             larcOptions.FindControl<RadioButton>("LarcFormatRadio")!.IsChecked = true;
             larcOptions.FindControl<CheckBox>("TestCreatedArchiveBox")!.IsChecked = true;
             string larcOutput = larcOptions.Options.ArchiveName;
@@ -479,6 +478,7 @@ internal static class Program
             window.Hide();
             StandaloneExtractionChecks.Run(temporary, archivePath, larcOutput, "synthetic-created-password", Check, Capture);
             StandaloneCompressionChecks.Run(temporary, Check, Capture);
+            EncryptedCreationChecks.Run(temporary, Check, Capture);
             window.Show();
             var compactVm = new MainWindowViewModel();
             var compact = new MainWindow { DataContext = compactVm, Width = 720, Height = 440 };

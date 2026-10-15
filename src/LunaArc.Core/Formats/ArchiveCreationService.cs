@@ -13,6 +13,8 @@ public static class ArchiveCreationService
     {
         string output = Path.GetFullPath(options.OutputArchivePath);
         if (options.SplitVolumeSizeBytes.HasValue) throw new NotSupportedException("This creation workflow does not support split volumes.");
+        if (options.Format == OutputArchiveFormat.EncryptedTarGz && options.DeleteSourceAfterArchiving)
+            throw new NotSupportedException("Source deletion is not supported for the nested TAR GZip encryption wrapper. Sources were preserved.");
         ArchiveLock.EnsureWritable(output);
         foreach (string path in new[] { output, ArchiveRecoveryRecord.RecordPath(output), ArchiveLock.RecordPath(output) })
             if (File.Exists(path) || Directory.Exists(path)) throw new IOException("An output or companion file already exists. Choose a new archive name.");
@@ -25,7 +27,7 @@ public static class ArchiveCreationService
         }
         string directory = Path.GetDirectoryName(output)!;
         Directory.CreateDirectory(directory);
-        string extension = options.Format switch { OutputArchiveFormat.Zip => ".zip", OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.SevenZip => ".7z", _ => ".larc" };
+        string extension = options.Format switch { OutputArchiveFormat.Zip => ".zip", OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.SevenZip or OutputArchiveFormat.EncryptedTarGz => ".7z", _ => ".larc" };
         string temporary = Path.Combine(directory, ".lunaarc-" + Guid.NewGuid().ToString("N") + extension);
         string executable = temporary + ".sfx";
         string record = temporary + ".lrec";

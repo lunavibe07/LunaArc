@@ -44,7 +44,7 @@ public sealed class StandaloneCompressionSession : IDisposable
             var options = new CompressOptions
             {
                 OutputArchivePath = CompressionOptionsViewModel.ValidateOutputPath(output, new[] { request.Path }),
-                Format = settings.SelectedFormatIndex switch { 1 => OutputArchiveFormat.Zip, 2 => OutputArchiveFormat.TarGz, 3 => OutputArchiveFormat.SevenZip, _ => OutputArchiveFormat.LarcNative },
+                Format = settings.SelectedFormatIndex switch { 1 => OutputArchiveFormat.Zip, 2 when settings.PasswordInput.Length > 0 => OutputArchiveFormat.EncryptedTarGz, 2 => OutputArchiveFormat.TarGz, 3 => OutputArchiveFormat.SevenZip, _ => OutputArchiveFormat.LarcNative },
                 Level = (LunaCompressionLevel)Math.Clamp(settings.SelectedLevelIndex, 0, 5),
                 Password = settings.PasswordInput.Length == 0 ? null : settings.PasswordInput,
                 ArchiveComment = settings.ArchiveComment, SolidArchive = settings.SolidArchive,

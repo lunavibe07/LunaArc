@@ -32,7 +32,7 @@ public static class Program
 
         try
         {
-            string[] archiveCommands = { "list", "l", "extract-here", "x", "extract-smart", "extract-folder", "pack-larc", "pack-zip", "pack-7z", "make-sfx", "recovery-record", "repair", "lock", "unlock", "test", "t" };
+            string[] archiveCommands = { "list", "l", "extract-here", "x", "extract-smart", "extract-folder", "pack-larc", "pack-zip", "pack-7z", "pack-targz", "make-sfx", "recovery-record", "repair", "lock", "unlock", "test", "t" };
             bool scopedUnregister = command == "unregister-shell" && args.Length == 3 && args[1] == "--if-path";
             if (command is "register-shell" or "unregister-shell" && args.Length != 1 && !scopedUnregister)
                 throw new ArgumentException($"Command '{command}' takes no arguments.");
@@ -42,13 +42,11 @@ public static class Program
             {
                 if (args[i] is not ("-p" or "-o" or "--solid" or "--sfx" or "--recovery" or "--lock") || i + 1 >= args.Length)
                     throw new ArgumentException("Options require values: -p <password>, -o <output>, --solid/--sfx/--recovery/--lock <on|off>.");
-                if (args[i] == "-o" && command is not ("extract-here" or "x" or "pack-larc" or "pack-zip" or "pack-7z" or "make-sfx" or "repair"))
+                if (args[i] == "-o" && command is not ("extract-here" or "x" or "pack-larc" or "pack-zip" or "pack-7z" or "pack-targz" or "make-sfx" or "repair"))
                     throw new ArgumentException("This command does not accept an output option.");
                 if (args[i].StartsWith("--", StringComparison.Ordinal) &&
                     (!command.StartsWith("pack-", StringComparison.Ordinal) || args[i + 1] is not ("on" or "off")))
                     throw new ArgumentException("Archiving flags require a pack command and an on/off value.");
-                if (args[i] == "-p" && command is "pack-zip" or "pack-7z")
-                    throw new NotSupportedException("ZIP output does not support passwords. Use pack-larc instead.");
             }
             switch (command)
             {
@@ -106,12 +104,15 @@ public static class Program
                     break;
                 }
 
-                case "pack-larc" or "pack-zip" or "pack-7z":
+                case "pack-larc" or "pack-zip" or "pack-7z" or "pack-targz":
                 {
                     string source = Path.GetFullPath(args[1]);
-                    var format = command == "pack-zip" ? OutputArchiveFormat.Zip : command == "pack-7z" ? OutputArchiveFormat.SevenZip : OutputArchiveFormat.LarcNative;
+                    var format = command switch { "pack-zip" => OutputArchiveFormat.Zip, "pack-7z" => OutputArchiveFormat.SevenZip,
+                        "pack-targz" when !string.IsNullOrEmpty(GetOptionValue(args, "-p")) => OutputArchiveFormat.EncryptedTarGz,
+                        "pack-targz" => OutputArchiveFormat.TarGz, _ => OutputArchiveFormat.LarcNative };
                     bool sfx = GetOptionValue(args, "--sfx") == "on";
-                    string extension = sfx ? (OperatingSystem.IsWindows() ? ".exe" : ".run") : format == OutputArchiveFormat.Zip ? ".zip" : format == OutputArchiveFormat.SevenZip ? ".7z" : ".larc";
+                    string extension = sfx ? (OperatingSystem.IsWindows() ? ".exe" : ".run") : format switch
+                    { OutputArchiveFormat.Zip => ".zip", OutputArchiveFormat.SevenZip => ".7z", OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.EncryptedTarGz => ".tar.gz.7z", _ => ".larc" };
                     string output = GetOptionValue(args, "-o") ?? source + extension;
                     string result = await ArchiveCreationService.CreateAsync(new[] { source }, new CompressOptions
                     {
@@ -268,8 +269,9 @@ public static class Program
         Console.WriteLine("  luna-cli extract-smart <archive> [-p password] : Extract into a suitable folder");
         Console.WriteLine("  luna-cli extract-folder <archive> [-p password]: Always extract into an archive-named folder");
         Console.WriteLine("  luna-cli pack-larc <source> [-p password]       : Create a .larc archive");
-        Console.WriteLine("  luna-cli pack-zip <source>          : Create a ZIP archive");
-        Console.WriteLine("  luna-cli pack-7z <source> [-o archive.7z] [--solid on] : Create 7z output");
+        Console.WriteLine("  luna-cli pack-zip <source> [-p password] : Create ZIP (WinZip AES-256 with password)");
+        Console.WriteLine("  luna-cli pack-7z <source> [-p password] [--solid on] : Create 7z (AES-256 with encrypted names)");
+        Console.WriteLine("  luna-cli pack-targz <source> [-p password] : TAR GZip; password wraps it in .tar.gz.7z (extract twice)");
         Console.WriteLine("  Pack commands also accept --sfx on, --recovery on, --lock on and -o <new output>.");
         Console.WriteLine("  luna-cli make-sfx <archive> -o <new executable> : Published CLI only; standalone extractor");
         Console.WriteLine("  luna-cli recovery-record <archive>             : Create a .lrec companion");

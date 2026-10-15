@@ -27,7 +27,7 @@ Sign in to GitHub to download Actions artifacts. These links are currently sched
 | `src/LunaArc.Studio` | `LunaArc` desktop application using Avalonia and MVVM |
 | `tests/LunaArc.SmokeTests` | Executable integration checks using synthetic archive fixtures |
 
-Core uses SharpCompress 0.50.5 and ZstdSharp.Port 0.8.1. Published packages include the separate 7-Zip 26.04 encoder; see [license](branding/SevenZip_LICENSE.txt), [LGPL](branding/SevenZip_COPYING.txt) and [source/notice](branding/SevenZip_NOTICE.txt). Studio uses Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Standard TAR and TAR GZip handling uses the .NET TAR APIs.
+Core uses SharpCompress 0.50.5, SharpZipLib 1.4.2 ([MIT license](branding/SharpZipLib_LICENSE.txt)) for encrypted ZIP writing, and ZstdSharp.Port 0.8.1. Published packages include the separate 7-Zip 26.04 encoder; see [license](branding/SevenZip_LICENSE.txt), [LGPL](branding/SevenZip_COPYING.txt) and [source/notice](branding/SevenZip_NOTICE.txt). Studio uses Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Standard TAR and TAR GZip handling uses the .NET TAR APIs.
 
 ## Desktop interface
 
@@ -55,15 +55,26 @@ From Explorer, version **1.4.6** shows only this dialog and a compact compressio
 2. Enter a full **Archive name**, or use **Browse...**. The suggested name is unused; select another name if the destination already exists. Save outside selected source folders.
 3. Choose **LARC**, **ZIP**, **TAR GZip** or **7z** and a **Compression method** from Store through Best. Selecting a format updates the file extension.
 4. Choose the supported **Archiving options** below. **Test archived files** verifies contents before the completed file is placed at the requested output path.
-5. Use **Set password...** for LARC encryption. Enter and confirm the password; **Show password** reveals the fields. Both fields can be left blank to remove the password. ZIP/TAR GZip/7z password creation is not supported and is rejected.
+5. Use **Set password...**, enter and confirm the password; **Show password** reveals the fields. Leave both fields blank to remove it. Version **1.5.0** supports LARC, ZIP AES-256, 7z AES-256 and TAR GZip wrapped in encrypted 7z; see the format details below.
 6. Expand **Archive comment** to enter an optional LARC/ZIP comment. TAR GZip and 7z comments are not supported.
-7. Select **OK** to create the archive and open it in LunaArc. **Cancel** discards draft changes. Sources are kept unless deletion was explicitly selected for this creation. **Help** explains the controls.
+7. Select **OK** to create the archive. Toolbar Add opens the result in LunaArc; Explorer creation exits without opening the browser. **Cancel** discards draft changes. Sources are kept unless deletion was explicitly selected for this creation. **Help** explains the controls.
 
 Version **1.4.0** implements all six archiving options, with format/platform limits shown in General:
 
+Password behavior in **1.5.0**:
+
+| Format | Password protection |
+| --- | --- |
+| LARC | Existing LARC v1 encryption of names and contents; format unchanged. |
+| ZIP | Standard WinZip AES-256 encryption of contents. Names remain visible. Requires an AES-capable ZIP reader such as 7-Zip or WinRAR. Source data limited to 3 GiB and fewer than 65,535 entries; encrypted ZIP64/split output is unsupported. |
+| 7z | AES-256 with encrypted file names; supports solid compression. Uses the packaged encoder. |
+| TAR GZip | Creates `.tar.gz.7z`: an encrypted 7z containing one ordinary `.tar.gz`. Extract the outer layer with the password, then extract the inner TAR GZip. Removing the password restores `.tar.gz` output. Source deletion, solid mode, split volumes and comments are unavailable for this wrapper. |
+
+7z and wrapped TAR GZip passwords accept Unicode, up to 1024 characters, excluding line breaks and NUL. The encoder receives the password through redirected standard input rather than process arguments or a temporary password file. The wrapper stages a plaintext TAR GZip in the user's temporary directory and removes it on completion/failure; it needs temporary disk space. ZIP encryption is written by SharpZipLib and read/authenticated independently by SharpCompress and LunaArc's WinZip AES verifier. WinZip AES uses its standard password derivation; a strong password remains essential. LARC v1 uses its existing unauthenticated AES-CBC format.
+
 | Archiving option | Availability |
 | --- | --- |
-| Delete files after archiving | Supported for actual creation; off by default for every operation. Forces archive testing. |
+| Delete files after archiving | Supported for actual creation except the nested encrypted TAR GZip wrapper; off by default for every operation. Forces archive testing. |
 | Create SFX archive | Published self-contained packages; embeds a LunaArc extractor for the current OS and architecture. |
 | Create solid archive | 7z output only; genuine solid LZMA2 compression via the packaged 7-Zip 26.04 encoder. |
 | Add recovery record | Writes a .lrec companion with SHA-256 block checks and XOR parity. |
@@ -243,22 +254,24 @@ luna-cli extract-here <archive> [-o directory] [-p password]
 luna-cli extract-smart <archive> [-p password]
 luna-cli extract-folder <archive> [-p password]
 luna-cli pack-larc <file-or-directory> [-p password]
-luna-cli pack-zip <file-or-directory>
+luna-cli pack-zip <file-or-directory> [-p password]
+luna-cli pack-7z <file-or-directory> [-p password] [--solid on]
+luna-cli pack-targz <file-or-directory> [-p password]
 luna-cli test <archive> [-p password]
 luna-cli register-shell
 luna-cli unregister-shell
 ```
 
-Quote paths containing spaces. Packing creates `<source>.larc`, `<source>.zip` or `<source>.7z`, or uses the explicit new path from `-o`. Extraction currently overwrites matching destination files by default; choose a separate destination when preserving existing files matters. `test` returns a nonzero exit code for an unhealthy archive. Unknown commands and incomplete arguments also fail.
+Quote paths containing spaces. Packing creates `<source>.larc`, `<source>.zip`, `<source>.7z`, `<source>.tar.gz` or `<source>.tar.gz.7z`, or uses the explicit new path from `-o`. Extraction currently overwrites matching destination files by default; choose a separate destination when preserving existing files matters. `test` returns a nonzero exit code for an unhealthy archive. Unknown commands and incomplete arguments also fail.
 
 Shell registration is explicit and changes the current user's OS configuration. Run it from the published directory. Windows registers per-extension Explorer verbs through `SystemFileAssociations` and adds LunaArc as an Open With choice without changing existing defaults. It notifies Explorer after installation/removal. Linux registration creates a desktop launcher and Nautilus scripts under `XDG_DATA_HOME` (or `~/.local/share`); it does not automatically set default MIME associations or install Dolphin menus.
 
 ## Formats and current limitations
 
-- Create: `.larc`, `.zip`, `.tar.gz`, `.7z`. Studio exposes all four; CLI packing exposes LARC, ZIP and 7z. Published GUI/CLI packages support SFX overlays and LunaArc recovery/lock companions.
+- Create: `.larc`, `.zip`, `.tar.gz`, `.7z`. Studio and CLI expose all four; passwords on TAR GZip produce the explicit .tar.gz.7z wrapper. Published GUI/CLI packages support SFX overlays and LunaArc recovery/lock companions.
 - Read/extract: native .larc; `.tar`, `.tar.gz` and `.tgz` through .NET; ZIP, RAR and 7z through SharpCompress. Other compressed inputs depend on SharpCompress's format detection and need representative fixtures before claiming support.
 - `.larc` stores a versioned magic header, compressed JSON metadata and per-file payloads. Optional passwords encrypt both metadata and data using AES-256-CBC with PBKDF2-SHA256. CRC32 detects accidental corruption; the format does not provide authenticated encryption.
-- ZIP, TAR GZip and 7z output do not support passwords. Unsupported encryption is rejected rather than silently ignored. `TarZst` remains in the API enum but creation is explicitly rejected.
+- ZIP supports WinZip AES-256 passwords (visible file names; classic ZIP limits). 7z supports AES-256 with encrypted names. TAR GZip passwords use an encrypted `.tar.gz.7z` wrapper, requiring two extraction steps; native `.tar.gz` encryption is not claimed. `TarZst` remains in the API enum but creation is explicitly rejected.
 - Split-volume output exists for .larc/ZIP, but reading those split outputs is not implemented. Do not use it when an immediately readable archive is required.
 - File preview uses an isolated temporary session. Editing a preview does not update the original archive.
 - `.larc` currently buffers each file in memory. Large-file memory usage and speed claims require benchmarks.

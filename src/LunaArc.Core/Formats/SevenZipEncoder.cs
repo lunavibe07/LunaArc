@@ -16,6 +16,9 @@ public static class SevenZipEncoder
         if (!IsAvailable) throw new FileNotFoundException("7z creation requires the packaged 7-Zip encoder. Run the publish script or set LUNAARC_7ZIP_PATH.");
         if (options.SplitVolumeSizeBytes.HasValue || !string.IsNullOrEmpty(options.ArchiveComment))
             throw new NotSupportedException("7z output does not support split volumes or comments in LunaArc.");
+        bool encrypted = !string.IsNullOrEmpty(options.Password);
+        if (encrypted && (options.Password!.Length > 1024 || options.Password.IndexOfAny(new[] { '\r', '\n', '\0' }) >= 0))
+            throw new ArgumentException("7z passwords must be at most 1024 characters and cannot contain line breaks or NUL.");
         string stage = Directory.CreateTempSubdirectory("LunaArc_7z_").FullName;
         try
         {
@@ -34,7 +37,16 @@ public static class SevenZipEncoder
             job.WaitIfPaused();
             job.Token.ThrowIfCancellationRequested();
             var info = new ProcessStartInfo(ExecutablePath) { UseShellExecute = false, CreateNoWindow = true,
-                WorkingDirectory = inputDirectory, RedirectStandardOutput = true, RedirectStandardError = true };
+                WorkingDirectory = inputDirectory, RedirectStandardOutput = true, RedirectStandardError = true,
+                RedirectStandardInput = encrypted };
+            if (encrypted)
+            {
+                // Supply secrets through stdin, never process arguments or temporary files.
+                info.StandardInputEncoding = new System.Text.UTF8Encoding(false);
+                info.ArgumentList.Add("-p");
+                info.ArgumentList.Add("-mhe=on");
+                info.ArgumentList.Add("-sccUTF-8");
+            }
             int level = new[] { 0, 1, 3, 5, 7, 9 }[(int)options.Level];
             foreach (string arg in new[] { "a", "-t7z", "-y", "-bd", "-bso0", "-bse0", "-m0=LZMA2", "-md=32m", "-mmt=2",
                 $"-mx={level}", options.SolidArchive ? "-ms=on" : "-ms=off", "--", Path.Combine(stage, "result.7z"), "." })
@@ -43,6 +55,12 @@ public static class SevenZipEncoder
             var stdout = process.StandardOutput.ReadToEndAsync();
             var stderr = process.StandardError.ReadToEndAsync();
             using var cancel = job.Token.Register(() => { try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } });
+            if (encrypted)
+            {
+                await process.StandardInput.WriteLineAsync(options.Password.AsMemory(), job.Token);
+                await process.StandardInput.WriteLineAsync(options.Password.AsMemory(), job.Token);
+                process.StandardInput.Close();
+            }
             await process.WaitForExitAsync();
             await Task.WhenAll(stdout, stderr);
             job.Token.ThrowIfCancellationRequested();

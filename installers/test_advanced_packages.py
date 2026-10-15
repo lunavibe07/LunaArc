@@ -69,6 +69,28 @@ with tempfile.TemporaryDirectory(prefix="LunaArc_Published_") as temporary:
             assert hashlib.sha256(repaired_sfx.read_bytes()).digest() == expected_sfx
             run(repaired_sfx, "-o", root / "repaired-sfx-output")
 
+    # Password creation and two-layer TAR GZip compatibility in actual published packages.
+    fake_password = "synthetic-published-暗号"
+    for command, extension in [("pack-zip", ".zip"), ("pack-7z", ".7z"), ("pack-targz", ".tar.gz.7z")]:
+        encrypted = root / (command + "-encrypted" + extension)
+        run(cli, command, source, "-o", encrypted, "-p", fake_password)
+        run(cli, "test", encrypted, "-p", fake_password)
+        run(cli, "test", encrypted, "-p", "wrong-synthetic-password", success=False)
+        unpacked = root / (command + "-decrypted")
+        run(cli, "extract-here", encrypted, "-o", unpacked, "-p", fake_password)
+        if command == "pack-targz":
+            inner = next(unpacked.glob("*.tar.gz"))
+            unpacked = root / "targz-inner-decrypted"
+            run(cli, "extract-here", inner, "-o", unpacked)
+        assert (unpacked / "source" / "same.txt").read_text() == "Synthetic standalone extractor fixture"
+        encrypted_sfx = root / (command + "-encrypted-sfx" + (".exe" if os.name == "nt" else ".run"))
+        run(cli, command, source, "-o", encrypted_sfx, "-p", fake_password, "--sfx", "on")
+        # pack uses the GUI stub; make-sfx creates a command-line stub for unattended execution.
+        cli_sfx = root / (command + "-encrypted-cli-sfx" + (".exe" if os.name == "nt" else ".run"))
+        run(cli, "make-sfx", encrypted, "-o", cli_sfx, "-p", fake_password)
+        run(cli_sfx, "-o", root / (command + "-sfx-decrypted"), "-p", fake_password)
+    print("PASS: published AES ZIP/7z and encrypted TAR GZip wrapper creation, wrong passwords and round trips.")
+
     # A full GUI extractor is also built and verified without opening an OS window.
     gui_sfx = root / ("gui-extractor.exe" if os.name == "nt" else "gui-extractor.run")
     run(cli, "pack-7z", source, "-o", gui_sfx, "--solid", "on", "--sfx", "on", "--recovery", "on", "--lock", "on")
