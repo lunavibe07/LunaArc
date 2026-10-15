@@ -37,7 +37,11 @@ jobs:
       - name: Build Release
         run: dotnet build LunaArc.sln -c Release --no-restore
       - name: Archive smoke checks
+        env:
+          LUNAARC_LARGE_CHECKS: '1'
         run: dotnet run --project tests/LunaArc.SmokeTests -c Release --no-build
+      - name: Release packaging checks
+        run: python installers/test_prepare_release.py
       - name: Rendered Studio UI checks
         run: dotnet run --project tests/LunaArc.StudioChecks -c Release --no-build -- dist/ui-preview/${{ matrix.runtime }}
       - uses: actions/upload-artifact@v4

@@ -7,6 +7,33 @@ namespace LunaArc.Core.Security;
 /// </summary>
 public static class LunaAes256Cipher
 {
+    // Same salt/IV/CBC layout as the byte-array API, with bounded payload buffers.
+    public static async Task<CryptoStream> CreateEncryptingStreamAsync(Stream output, string password, CancellationToken ct)
+    {
+        byte[] salt = RandomNumberGenerator.GetBytes(SaltSize), iv = RandomNumberGenerator.GetBytes(IvSize);
+        await output.WriteAsync(salt, ct);
+        await output.WriteAsync(iv, ct);
+        return CreateCryptoStream(output, password, salt, iv, encrypt: true);
+    }
+
+    public static async Task<CryptoStream> CreateDecryptingStreamAsync(Stream input, string password, CancellationToken ct)
+    {
+        byte[] salt = new byte[SaltSize], iv = new byte[IvSize];
+        await input.ReadExactlyAsync(salt, ct); await input.ReadExactlyAsync(iv, ct);
+        return CreateCryptoStream(input, password, salt, iv, encrypt: false);
+    }
+
+    private static CryptoStream CreateCryptoStream(Stream stream, string password, byte[] salt, byte[] iv, bool encrypt)
+    {
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, KeySize);
+        try
+        {
+            using var aes = Aes.Create(); aes.Key = key; aes.IV = iv;
+            return new CryptoStream(stream, encrypt ? aes.CreateEncryptor() : aes.CreateDecryptor(),
+                encrypt ? CryptoStreamMode.Write : CryptoStreamMode.Read, leaveOpen: true);
+        }
+        finally { CryptographicOperations.ZeroMemory(key); }
+    }
     private const int SaltSize = 16;
     private const int IvSize = 16;
     private const int KeySize = 32;

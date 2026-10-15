@@ -112,40 +112,46 @@ public sealed class LarcNativeHandler
                         continue;
                     }
 
-                    byte[] rawBytes = await File.ReadAllBytesAsync(item.FullPath, controller.Token);
-                    uint crc = Crc32Verifier.Compute(rawBytes);
-
-                    byte[] compressedBytes;
-                    if (options.Level == LunaCompressionLevel.Store)
-                    {
-                        compressedBytes = rawBytes;
-                    }
-                    else
-                    {
-                        using var compressor = new Compressor(zstdLevel);
-                        compressedBytes = compressor.Wrap(rawBytes).ToArray();
-                    }
-
-                    if (isEncrypted)
-                    {
-                        compressedBytes = LunaAes256Cipher.EncryptBytes(compressedBytes, options.Password!);
-                    }
-
                     long offset = payloadOut.Position;
-                    await payloadOut.WriteAsync(compressedBytes, controller.Token);
+                    await using var input = File.OpenRead(item.FullPath);
+                    long originalLength = input.Length;
+                    uint crc;
+                    await using (var encrypted = isEncrypted
+                        ? await LunaAes256Cipher.CreateEncryptingStreamAsync(payloadOut, options.Password!, controller.Token) : null)
+                    {
+                        Stream encoded = encrypted ?? (Stream)payloadOut;
+                        var compressed = options.Level == LunaCompressionLevel.Store ? null : new CompressionStream(encoded, zstdLevel);
+                        bool copied = false;
+                        try
+                        {
+                            // A declared frame size keeps new payloads readable by the original LARC v1 reader.
+                            compressed?.SetPledgedSrcSize((ulong)originalLength);
+                            crc = await CopyPayloadAsync(input, compressed ?? encoded, originalLength, controller,
+                                current => onProgress?.Invoke(processedBytes + current, Math.Max(1, totalBytes), item.RelativePath));
+                            copied = true;
+                        }
+                        finally
+                        {
+                            // Ending an incomplete pledged frame fails; retain the original cancellation/I/O error.
+                            if (compressed != null)
+                                try { await compressed.DisposeAsync(); } catch when (!copied) { }
+                        }
+                        if (encrypted != null) await encrypted.FlushFinalBlockAsync(controller.Token);
+                    }
+                    long compressedLength = payloadOut.Position - offset;
 
                     headerDto.Entries.Add(new LarcEntryDto
                     {
                         Path = item.RelativePath,
                         IsDir = false,
-                        OrigSize = rawBytes.LongLength,
-                        CompSize = compressedBytes.LongLength,
+                        OrigSize = originalLength,
+                        CompSize = compressedLength,
                         DataOffset = offset,
                         Crc32 = crc,
                         LastModifiedUtcTicks = File.GetLastWriteTimeUtc(item.FullPath).Ticks
                     });
 
-                    processedBytes += rawBytes.LongLength;
+                    processedBytes += originalLength;
                     onProgress?.Invoke(processedBytes, Math.Max(1, totalBytes), item.RelativePath);
                 }
             }
@@ -237,37 +243,46 @@ public sealed class LarcNativeHandler
             }
 
             fs.Seek(payloadBaseOffset + entry.DataOffset, SeekOrigin.Begin);
-            byte[] block = new byte[entry.CompSize];
-            await fs.ReadExactlyAsync(block, controller.Token);
-
-            if (isEncrypted)
-            {
-                block = LunaAes256Cipher.DecryptBytes(block, options.Password ?? string.Empty);
-            }
-
-            byte[] plainBytes;
-            if (isStoreMode)
-            {
-                plainBytes = block;
-            }
-            else
-            {
-                using var decompressor = new Decompressor();
-                plainBytes = decompressor.Unwrap(block).ToArray();
-            }
-
-            uint computedCrc = Crc32Verifier.Compute(plainBytes);
+            using var bounded = new BoundedReadStream(fs, entry.CompSize);
             await AtomicExtractFile.WriteAsync(targetPath, options.KeepBrokenFiles, controller.Token, async output =>
             {
-                await output.WriteAsync(plainBytes, controller.Token);
-                if (computedCrc != entry.Crc32)
-                    throw new InvalidDataException($"CRC32 mismatch in '{entry.Path}' (the file may be damaged).");
+                await using var decrypted = isEncrypted
+                    ? await LunaAes256Cipher.CreateDecryptingStreamAsync(bounded, options.Password ?? string.Empty, controller.Token) : null;
+                Stream encoded = decrypted ?? (Stream)bounded;
+                using var decompressed = isStoreMode ? null : new DecompressionStream(encoded);
+                uint computedCrc = await CopyPayloadAsync(decompressed ?? encoded, output, entry.OrigSize, controller, _ => { });
+                // Reading to EOF also verifies CBC padding. The bounded view cannot consume the next entry.
+                if (decrypted != null) await decrypted.CopyToAsync(Stream.Null, controller.Token);
+                if (bounded.Remaining != 0 || computedCrc != entry.Crc32)
+                    throw new InvalidDataException($"CRC32 or payload length mismatch in '{entry.Path}'.");
             });
             File.SetLastWriteTimeUtc(targetPath, new DateTime(entry.LastModifiedUtcTicks, DateTimeKind.Utc));
 
-            extractedBytes += plainBytes.LongLength;
+            extractedBytes += entry.OrigSize;
             onProgress?.Invoke(extractedBytes, Math.Max(1, totalBytes), entry.Path);
         }
+    }
+
+    private static async Task<uint> CopyPayloadAsync(Stream input, Stream output, long expected, LunaJobController job, Action<long> progress)
+    {
+        byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(LunaStreamPipeline.ChunkSize);
+        long written = 0; uint crc = 0xffffffff;
+        try
+        {
+            while (true)
+            {
+                job.WaitIfPaused(); job.Token.ThrowIfCancellationRequested();
+                int read = await input.ReadAsync(buffer.AsMemory(0, LunaStreamPipeline.ChunkSize), job.Token);
+                if (read == 0) break;
+                if (read > expected - written) throw new InvalidDataException("LARC payload exceeds its declared size.");
+                crc = Crc32Verifier.UpdateCrc32(crc, buffer.AsSpan(0, read));
+                await output.WriteAsync(buffer.AsMemory(0, read), job.Token);
+                written += read; progress(written);
+            }
+            if (written != expected) throw new InvalidDataException("LARC payload is shorter than its declared size.");
+            return ~crc;
+        }
+        finally { System.Buffers.ArrayPool<byte>.Shared.Return(buffer); }
     }
 
     private static async Task<(LarcHeaderDto Header, bool IsEncrypted, byte Flags)> ReadHeaderInternalAsync(Stream fs, string? password)
@@ -313,7 +328,7 @@ public sealed class LarcNativeHandler
         long payloadLength = fs.Length - fs.Position;
         foreach (var entry in header.Entries)
         {
-            if (entry.OrigSize < 0 || entry.CompSize < 0 || entry.CompSize > int.MaxValue || entry.DataOffset < 0 ||
+            if (entry.OrigSize < 0 || entry.CompSize < 0 || entry.DataOffset < 0 ||
                 entry.DataOffset > payloadLength || entry.CompSize > payloadLength - entry.DataOffset ||
                 entry.LastModifiedUtcTicks < DateTime.MinValue.Ticks || entry.LastModifiedUtcTicks > DateTime.MaxValue.Ticks)
                 throw new InvalidDataException("Invalid .larc entry metadata.");

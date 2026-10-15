@@ -1,0 +1,74 @@
+name: Publish verified release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful main-branch Build and verify run ID to publish
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source build
+        id: source
+        uses: actions/github-script@v7
+        env:
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        with:
+          script: |
+            if (!/^\d+$/.test(process.env.BUILD_RUN_ID)) throw new Error('Invalid build run ID');
+            const {data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: Number(process.env.BUILD_RUN_ID)});
+            if (run.status !== 'completed' || run.conclusion !== 'success' || run.event !== 'push' ||
+                run.head_branch !== 'main' || run.path !== '.github/workflows/build.yml' ||
+                run.head_repository.full_name !== `${context.repo.owner}/${context.repo.repo}`)
+              throw new Error('Only successful main-branch push builds from this repository can be released');
+            core.setOutput('sha', run.head_sha);
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+          pattern: LunaArc-Windows-*
+          path: release-input
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+          name: LunaArc-linux-x64
+          path: release-input/linux
+      - name: Verify and prepare release assets
+        id: assets
+        shell: bash
+        run: |
+          python installers/prepare_release.py release-input release-assets
+          version=$(python -c "import xml.etree.ElementTree as E; print(E.parse('Directory.Build.props').findtext('.//Version'))")
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+      - name: Publish immutable versioned assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.assets.outputs.tag }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_RUN: ${{ inputs.build_run_id }}
+        shell: bash
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release already exists; assets will not be overwritten." >&2
+            exit 1
+          fi
+          printf 'Verified Windows and Linux packages for %s.\n\nSource: %s\nBuild: https://github.com/%s/actions/runs/%s\n\nWindows 11 main-menu integration uses a preview signing certificate and requires explicit trust consent.\n\nCheck downloads against SHA256SUMS.txt.\n' "$TAG" "$SOURCE_SHA" "$GITHUB_REPOSITORY" "$SOURCE_RUN" > release-notes.md
+          gh release create "$TAG" release-assets/* --target "$SOURCE_SHA" --title "LunaArc $TAG" --notes-file release-notes.md --draft
+          gh release edit "$TAG" --draft=false --latest

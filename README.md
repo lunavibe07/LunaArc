@@ -27,9 +27,11 @@ Sign in to GitHub to download Actions artifacts. These links are currently sched
 | `src/LunaArc.Studio` | `LunaArc` desktop application using Avalonia and MVVM |
 | `tests/LunaArc.SmokeTests` | Executable integration checks using synthetic archive fixtures |
 
-Core uses SharpCompress 0.50.5, SharpZipLib 1.4.2 ([MIT license](branding/SharpZipLib_LICENSE.txt)) for encrypted ZIP writing, and ZstdSharp.Port 0.8.1. Published packages include the separate 7-Zip 26.04 encoder; see [license](branding/SevenZip_LICENSE.txt), [LGPL](branding/SevenZip_COPYING.txt) and [source/notice](branding/SevenZip_NOTICE.txt). Studio uses Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Standard TAR and TAR GZip handling uses the .NET TAR APIs.
+Core uses SharpCompress 0.50.5, SharpZipLib 1.4.2 ([MIT license](branding/SharpZipLib_LICENSE.txt)) for encrypted ZIP writing, and ZstdSharp.Port 0.8.7. Published packages include the separate 7-Zip 26.04 encoder; see [license](branding/SevenZip_LICENSE.txt), [LGPL](branding/SevenZip_COPYING.txt) and [source/notice](branding/SevenZip_NOTICE.txt). Studio uses Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Standard TAR and TAR GZip handling uses the .NET TAR APIs.
 
 ## Desktop interface
+
+Version **2.1.0** streams LARC payloads through pooled 64 KiB buffers instead of loading each file into byte arrays. LARC v1 headers, CBC layout and Zstandard frame sizes remain compatible with the original reader. CRC32 and exact output lengths are verified before replacing extracted files. Metadata still scales with entry count and compression presets can use additional codec memory. Encrypted ZIP now supports ZIP64 sizes and entry counts, with independent AES authentication and checked 64-bit directory bounds; split archives remain unsupported.
 
 Version **2.0.0** introduces **Nocturne Orbit**, the selected LunaArc design: a matte navy workspace with cyan extraction controls, warm gold folder accents and subtle orbital artwork. The original moon-and-sun logo remains unchanged. A left rail provides Open, Create, Tools, Help and Options; the main area combines an archive heading, folder search/path, file table and selection details. Compression, extraction, password, progress, About and offline Help windows share the dark palette.
 
@@ -71,7 +73,7 @@ Password behavior in **1.5.0**:
 | Format | Password protection |
 | --- | --- |
 | LARC | Existing LARC v1 encryption of names and contents; format unchanged. |
-| ZIP | Standard WinZip AES-256 encryption of contents. Names remain visible. Requires an AES-capable ZIP reader such as 7-Zip or WinRAR. Source data limited to 3 GiB and fewer than 65,535 entries; encrypted ZIP64/split output is unsupported. |
+| ZIP | Standard WinZip AES-256 encryption of contents. Names remain visible. Requires an AES-capable ZIP reader such as 7-Zip or WinRAR. ZIP64 supports large files and more than 65,535 entries. Encrypted split output is unsupported. |
 | 7z | AES-256 with encrypted file names; supports solid compression. Uses the packaged encoder. |
 | TAR GZip | Creates `.tar.gz.7z`: an encrypted 7z containing one ordinary `.tar.gz`. Extract the outer layer with the password, then extract the inner TAR GZip. Removing the password restores `.tar.gz` output. Source deletion, solid mode, split volumes and comments are unavailable for this wrapper. |
 
@@ -160,7 +162,7 @@ To use the vault, enter a master password and select **Save list** to save the c
 
 The vault is stored at `ApplicationData/LunaArc/password_vault.enc`, using a versioned AES-256-GCM envelope, a fresh salt/nonce for every save, a 16-byte authentication tag and PBKDF2-SHA256 with 600,000 iterations. A wrong master password or altered data fails authentication. Saving an existing vault first verifies its master password and uses a temporary file plus replacement to preserve the original on failure. Linux files are created with owner-only read/write permissions. There is no master-password recovery. Any old `password_vault.json` is left untouched and is not read automatically.
 
-The archive format remains compatible: no eight-byte password-check tag has been inserted into existing LARC headers. A quick password verifier cannot replace integrity validation. ZIP AES AE-2 has no payload CRC; LunaArc now validates its authentication code before testing or extracting. The additional encrypted ZIP validation currently rejects ZIP64 and split ZIP. See the [WinZip AES specification](https://www.winzip.com/en/support/aes-encryption/) and [.NET AES-GCM documentation](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.aesgcm?view=net-8.0).
+The archive format remains compatible: no eight-byte password-check tag has been inserted into existing LARC headers. A quick password verifier cannot replace integrity validation. ZIP AES AE-2 has no payload CRC; LunaArc now validates its authentication code before testing or extracting. The additional encrypted ZIP validation supports ZIP64 and still rejects split ZIP. See the [WinZip AES specification](https://www.winzip.com/en/support/aes-encryption/) and [.NET AES-GCM documentation](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.aesgcm?view=net-8.0).
 
 ## Requirements
 

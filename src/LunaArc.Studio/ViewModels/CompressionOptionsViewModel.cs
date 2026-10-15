@@ -43,7 +43,7 @@ public partial class CompressionOptionsViewModel : ObservableObject
     public string Extension => CreateSfx ? (OperatingSystem.IsWindows() ? ".exe" : ".run") : PayloadExtension;
     private string PayloadExtension => SelectedFormatIndex switch { 1 => ".zip", 2 when PasswordInput.Length > 0 => ".tar.gz.7z", 2 => ".tar.gz", 3 => ".7z", _ => ".larc" };
     public string FormatNote => IsLarc ? "LARC supports password encryption of names and contents."
-        : IsZip ? "ZIP supports WinZip AES-256 passwords and comments. File names remain visible. Encrypted ZIP is limited to 3 GiB of input; ZIP64/split encryption is unsupported."
+        : IsZip ? "ZIP supports WinZip AES-256 passwords and comments. File names remain visible. ZIP64 supports large files and many entries; split encryption is unsupported."
         : IsSevenZip ? "7z supports AES-256 passwords with encrypted file names and solid LZMA2 compression. Encoding needs the packaged 7-Zip tool and staging space. Pause applies before/after encoding; Cancel stops it."
         : "With a password, creates .tar.gz.7z: an AES-256 encrypted 7z containing one TAR GZip. Extract twice. Source deletion is unavailable for this wrapper.";
     public string PasswordSummary => PasswordInput.Length == 0 ? "No password set" : "Password set";

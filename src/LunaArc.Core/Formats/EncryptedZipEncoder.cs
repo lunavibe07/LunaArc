@@ -27,7 +27,6 @@ internal static class EncryptedZipEncoder
                 if (!names.Add(name)) throw new IOException("Encrypted ZIP source names overlap.");
                 bool directory = System.IO.Directory.Exists(source);
                 entries.Add((source, name, directory));
-                if (entries.Count >= ushort.MaxValue) throw new NotSupportedException("Encrypted ZIP64 creation is unsupported (too many entries).");
                 if (directory)
                     foreach (string child in System.IO.Directory.EnumerateFileSystemEntries(source))
                         Collect(child, name + "/" + Path.GetFileName(child));
@@ -40,12 +39,10 @@ internal static class EncryptedZipEncoder
                 Collect(full, name);
             }
             long total = entries.Where(e => !e.Directory).Sum(e => new FileInfo(e.Source).Length);
-            // Keep below ZIP64; the independent authentication reader supports classic ZIP only.
-            if (total > 3L * 1024 * 1024 * 1024) throw new NotSupportedException("Encrypted ZIP creation is limited to 3 GiB of source data. Use 7z for larger inputs.");
             string temporary = Path.Combine(stage, "result.zip");
             using (var zip = new ZipOutputStream(File.Create(temporary)))
             {
-                zip.UseZip64 = UseZip64.Off;
+                zip.UseZip64 = UseZip64.Dynamic;
                 zip.Password = options.Password;
                 zip.SetLevel(new[] { 0, 1, 3, 5, 7, 9 }[(int)options.Level]);
                 if (!string.IsNullOrEmpty(options.ArchiveComment)) zip.SetComment(options.ArchiveComment);

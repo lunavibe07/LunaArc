@@ -26,13 +26,31 @@ internal static class ZipAesIntegrity
         if (end < 0) throw new InvalidDataException("ZIP end record is missing.");
         if (U16(tail, end + 4) != 0 || U16(tail, end + 6) != 0)
             throw new NotSupportedException("Encrypted split ZIP verification is unsupported.");
-        uint directoryOffset = U32(tail, end + 16);
-        ushort count = U16(tail, end + 10);
-        if (directoryOffset == uint.MaxValue || count == ushort.MaxValue)
-            throw new NotSupportedException("Encrypted ZIP64 verification is unsupported.");
-        long directoryEnd = directoryOffset + (long)U32(tail, end + 12);
-        if (count != entries.Count || directoryEnd > stream.Length - tail.Length + end)
+        long directoryOffset = U32(tail, end + 16), directorySize = U32(tail, end + 12);
+        long count = U16(tail, end + 10), endOffset = stream.Length - tail.Length + end;
+        long directoryLimit = endOffset;
+        if (directoryOffset == uint.MaxValue || directorySize == uint.MaxValue || count == ushort.MaxValue)
+        {
+            if (endOffset < 20) throw new InvalidDataException("Missing ZIP64 locator.");
+            stream.Position = endOffset - 20;
+            byte[] locator = new byte[20]; stream.ReadExactly(locator);
+            if (U32(locator, 0) != 0x07064b50 || U32(locator, 4) != 0 || U32(locator, 16) != 1)
+                throw new InvalidDataException("Invalid or split ZIP64 locator.");
+            long recordOffset = I64(locator, 8);
+            if (recordOffset > endOffset - 20 - 56) throw new InvalidDataException("Invalid ZIP64 end offset.");
+            stream.Position = recordOffset;
+            byte[] record = new byte[56]; stream.ReadExactly(record);
+            long recordLength = I64(record, 4);
+            if (U32(record, 0) != 0x06064b50 || recordLength < 44 || recordLength > endOffset - 20 - recordOffset - 12 ||
+                U32(record, 16) != 0 || U32(record, 20) != 0 || I64(record, 24) != I64(record, 32))
+                throw new InvalidDataException("Invalid or split ZIP64 end record.");
+            count = I64(record, 32); directorySize = I64(record, 40); directoryOffset = I64(record, 48);
+            directoryLimit = recordOffset;
+        }
+        if (count != entries.Count || directoryOffset > directoryLimit || directorySize > directoryLimit - directoryOffset ||
+            U16(tail, end + 8) != U16(tail, end + 10))
             throw new InvalidDataException("Inconsistent ZIP directory.");
+        long directoryEnd = directoryOffset + directorySize;
         stream.Position = directoryOffset;
         byte[] header = new byte[46];
         for (int index = 0; index < count; index++)
@@ -47,24 +65,36 @@ internal static class ZipAesIntegrity
             stream.ReadExactly(extra);
             stream.Position += U16(header, 32);
             if (stream.Position > directoryEnd) throw new InvalidDataException("ZIP directory exceeds its bounds.");
+            if (U16(header, 34) != 0) throw new InvalidDataException("Split ZIP entries are unsupported.");
             if (U16(header, 10) != 99) continue;
             if ((U16(header, 8) & 1) == 0 || !entries[index].IsEncrypted)
                 throw new InvalidDataException("Invalid ZIP AES encryption flags.");
-            int aes = -1;
+            int aes = -1, zip64 = -1, zip64Length = 0;
             for (int offset = 0; offset < extra.Length;)
             {
                 if (extra.Length - offset < 4) throw new InvalidDataException("Invalid ZIP extra field.");
                 int size = U16(extra, offset + 2);
                 if (size > extra.Length - offset - 4) throw new InvalidDataException("Truncated ZIP extra field.");
                 if (U16(extra, offset) == 0x9901) { if (size != 7) throw new InvalidDataException("Invalid ZIP AES extra field."); aes = offset + 4; }
+                if (U16(extra, offset) == 1) { if (zip64 >= 0) throw new InvalidDataException("Duplicate ZIP64 metadata."); zip64 = offset + 4; zip64Length = size; }
                 offset += 4 + size;
             }
             if (aes < 0 || U16(extra, aes + 2) != 0x4541 || U16(extra, aes) is not (1 or 2))
                 throw new InvalidDataException("Unsupported ZIP AES metadata.");
             int keyBytes = extra[aes + 4] switch { 1 => 16, 2 => 24, 3 => 32, _ => throw new InvalidDataException("Invalid ZIP AES strength.") };
-            uint compressed = U32(header, 20), localOffset = U32(header, 42);
-            if (compressed == uint.MaxValue || localOffset == uint.MaxValue)
-                throw new NotSupportedException("Encrypted ZIP64 verification is unsupported.");
+            long compressed = U32(header, 20), localOffset = U32(header, 42);
+            int cursor = zip64;
+            long ReadExtended()
+            {
+                if (cursor < 0 || cursor > zip64 + zip64Length - 8) throw new InvalidDataException("Missing ZIP64 entry metadata.");
+                long value = I64(extra, cursor); cursor += 8; return value;
+            }
+            long original = U32(header, 24);
+            if (original == uint.MaxValue) original = ReadExtended();
+            if (compressed == uint.MaxValue) compressed = ReadExtended();
+            if (localOffset == uint.MaxValue) localOffset = ReadExtended();
+            if (original != entries[index].Size || compressed != entries[index].CompressedSize)
+                throw new InvalidDataException("ZIP entry sizes disagree with its directory.");
             long nextRecord = stream.Position;
             ValidatePayload(stream, localOffset, directoryOffset, compressed, name, password, keyBytes, job);
             stream.Position = nextRecord;
@@ -77,7 +107,7 @@ internal static class ZipAesIntegrity
         byte[] name, string? password, int keyBytes, LunaJobController job)
     {
         if (password == null) throw new CryptographicException("The ZIP archive requires a password.");
-        if (offset < 0 || offset + 30 > directoryOffset) throw new InvalidDataException("Invalid ZIP local offset.");
+        if (offset < 0 || offset > directoryOffset - 30) throw new InvalidDataException("Invalid ZIP local offset.");
         stream.Position = offset;
         byte[] local = new byte[30];
         stream.ReadExactly(local);
@@ -87,6 +117,7 @@ internal static class ZipAesIntegrity
         stream.ReadExactly(localName);
         if (!localName.AsSpan().SequenceEqual(name)) throw new InvalidDataException("ZIP local and directory names differ.");
         stream.Position += U16(local, 28);
+        if (stream.Position > directoryOffset) throw new InvalidDataException("ZIP local metadata exceeds its bounds.");
         int saltBytes = keyBytes / 2;
         if (compressed < saltBytes + 12 || compressed > directoryOffset - stream.Position)
             throw new InvalidDataException("Invalid ZIP AES payload bounds.");
@@ -121,4 +152,10 @@ internal static class ZipAesIntegrity
 
     private static ushort U16(byte[] bytes, int offset) => BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(offset, 2));
     private static uint U32(byte[] bytes, int offset) => BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(offset, 4));
+    private static long I64(byte[] bytes, int offset)
+    {
+        ulong value = BinaryPrimitives.ReadUInt64LittleEndian(bytes.AsSpan(offset, 8));
+        if (value > long.MaxValue) throw new InvalidDataException("ZIP64 value exceeds supported stream bounds.");
+        return (long)value;
+    }
 }
