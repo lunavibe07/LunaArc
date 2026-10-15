@@ -298,9 +298,18 @@ public sealed class LarcNativeHandler
             headerData = LunaAes256Cipher.DecryptBytes(headerData, password);
         }
 
-        using var decompressor = new Decompressor();
-        byte[] jsonBytes = decompressor.Unwrap(headerData).ToArray();
-        var header = JsonSerializer.Deserialize<LarcHeaderDto>(jsonBytes) ?? new LarcHeaderDto();
+        LarcHeaderDto header;
+        try
+        {
+            using var decompressor = new Decompressor();
+            byte[] jsonBytes = decompressor.Unwrap(headerData).ToArray();
+            header = JsonSerializer.Deserialize<LarcHeaderDto>(jsonBytes) ?? new LarcHeaderDto();
+        }
+        catch (Exception ex) when (ex is ZstdException or JsonException)
+        {
+            // A wrong CBC password can occasionally have valid padding; the decoded header still must be valid.
+            throw new InvalidDataException(isEncrypted ? "The LARC password is incorrect or its header is damaged." : "The LARC header is damaged.", ex);
+        }
         long payloadLength = fs.Length - fs.Position;
         foreach (var entry in header.Entries)
         {

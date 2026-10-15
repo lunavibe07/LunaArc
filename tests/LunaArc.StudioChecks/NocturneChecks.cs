@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using LunaArc.Core.Contracts;
 using LunaArc.Core.Formats;
 using LunaArc.Core.Pipeline;
@@ -53,6 +54,13 @@ internal static class NocturneChecks
             var extract = window.FindControl<Button>("ExtractButton")!;
             var right = extract.TranslatePoint(new Point(extract.Bounds.Width, 0), window);
             check(right is { X: <= 720 } && extract.Bounds.Width > 0, "Primary extraction control remains visible at minimum width");
+            var longRow = new VfsRowItem { NodeIndex = 0, Icon = string.Empty, Name = new string('M', 180) + ".txt", FullRelativePath = "Synthetic long filename layout fixture",
+                IsDirectory = false, OriginalSizeDisplay = "1 B", CompressedSizeDisplay = "1 B", RatioDisplay = "100%", CrcDisplay = "00000000", ModifiedDisplay = "2026-10-16" };
+            vm.VisibleItems.Insert(0, longRow); table.ScrollIntoView(longRow, table.Columns[0]); Dispatcher.UIThread.RunJobs();
+            capture(window, "nocturne-long-name.png");
+            var nameText = table.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == longRow.Name);
+            check(nameText.Bounds.Width <= table.Columns[0].ActualWidth && nameText.TextTrimming == Avalonia.Media.TextTrimming.CharacterEllipsis,
+                "Long archive names remain constrained to their filename column");
             vm.CloseArchive();
             check(vm.ExtractionDestination.Length == 0 && vm.ArchiveDisplayName == "Your archives, in orbit.", "Closing an archive resets Nocturne destination and heading");
         }
