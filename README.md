@@ -100,7 +100,7 @@ extractor.exe -o ./destination
 The dark extraction dialog includes a folder tree and **General / Password** tabs in both Setup and Portable editions. Version **1.3.3** adds a separate **Update mode** group with all three file-selection policies below.
 
 1. Open an archive and select **Extract To**, or right-click an archive in Windows Explorer and choose **LunaArc > Extract files...**. On Windows 11, the classic menu may be under **Show more options**.
-2. In **General**, enter a full destination path, select a folder in the tree, or use **Browse...**. Expand a tree item to load its subfolders.
+2. In **General**, enter a full destination path, select a folder in the tree, or use **Browse...**. Long paths have a compact preview such as `C:\…\Downloads\Archive` when unfocused; click the field to see and edit the full path, or hover to view it. The actual extraction destination is never shortened. The extraction window uses a compact layout. Expand a tree item to load its subfolders.
 3. Use **New folder** to create a folder inside the current destination. A destination that does not yet exist is created during extraction.
 4. Select an **Update mode** to choose eligible files, then an **Overwrite mode** to handle eligible conflicts. **Extract and replace files** and **Skip existing files** are the defaults. Select **Ask before overwrite** or **Overwrite without prompt** when you want to update older copies.
 5. For an encrypted archive, enter its password in the **Password** tab. Leave it blank to reuse the password already unlocked for this archive. **Show password** reveals the input; closing the dialog clears it.

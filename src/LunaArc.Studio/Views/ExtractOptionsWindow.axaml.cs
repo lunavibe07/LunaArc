@@ -19,6 +19,14 @@ public partial class ExtractOptionsWindow : Window
     public ExtractOptionsWindow(string destination) : this() =>
         Vm.Destination = destination;
     private ExtractionOptionsViewModel Vm => (ExtractionOptionsViewModel)DataContext!;
+    private void OnDestinationFocused(object? sender, Avalonia.Input.GotFocusEventArgs e)
+    {
+        if (sender is TextBox box) box.SelectAll();
+    }
+    private void OnDestinationUnfocused(object? sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox box) box.SelectionStart = box.SelectionEnd = box.CaretIndex;
+    }
     private async void OnBrowse(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions

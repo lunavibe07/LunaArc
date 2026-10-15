@@ -7,7 +7,29 @@ namespace LunaArc.Studio.ViewModels;
 public partial class ExtractionOptionsViewModel : ObservableObject, IDisposable
 {
     private readonly CancellationTokenSource _lifetime = new();
-    [ObservableProperty] private string _destination = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DestinationPreview))]
+    private string _destination = string.Empty;
+    // Presentation only: never use the abbreviated text for filesystem operations.
+    public string DestinationPreview
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(Destination) || Destination.Length <= 52) return Destination ?? string.Empty;
+            char[] separators = { '/', '\\' };
+            string trimmed = Destination.TrimEnd(separators);
+            int last = trimmed.LastIndexOfAny(separators);
+            if (last <= 0) return Destination;
+            int parent = trimmed.LastIndexOfAny(separators, last - 1);
+            string root;
+            try { root = Path.GetPathRoot(Destination) ?? string.Empty; }
+            catch (ArgumentException) { return Destination; }
+            string tail = trimmed[(parent + 1)..];
+            if (root.Length == 0 || parent < root.Length) return Destination;
+            char separator = Destination.Contains('\\') ? '\\' : '/';
+            return root + "…" + separator + tail;
+        }
+    }
     [ObservableProperty] private string _password = string.Empty;
     [ObservableProperty] private bool _showPassword;
     [ObservableProperty] private bool _displayAfterExtraction;

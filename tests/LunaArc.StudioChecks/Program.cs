@@ -266,6 +266,23 @@ internal static class Program
             Check(extractionOptions.FindControl<RadioButton>("ExtractAndReplaceRadio")!.IsChecked == true, "Update mode defaults to extracting all eligible files");
             Check(extractionOptions.FindControl<TextBox>("ExtractionPasswordBox")!.PasswordChar != '\0', "Extraction password masked");
             var extractionVm = (ExtractionOptionsViewModel)extractionOptions.DataContext!;
+            string longDestination = Path.Combine(temporary, "a long parent directory for the extraction dialog", "Downloads", "LunaArc-Windows-Setup (2)");
+            extractionVm.Destination = longDestination;
+            var destinationBox = extractionOptions.FindControl<TextBox>("DestinationBox")!;
+            var destinationPreview = extractionOptions.FindControl<TextBlock>("DestinationPreview")!;
+            extractionOptions.FindControl<Button>("BrowseDestinationButton")!.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Check(destinationPreview.IsVisible && destinationPreview.Text!.Contains("…") && destinationPreview.Text.EndsWith("LunaArc-Windows-Setup (2)")
+                && destinationBox.Text == longDestination, "Destination preview abbreviates parents while preserving the complete extraction path");
+            Capture(extractionOptions, "extract-path-compact.png");
+            destinationBox.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Check(!destinationPreview.IsVisible && destinationBox.SelectedText == longDestination, "Focusing destination exposes and selects the full editable path");
+            Capture(extractionOptions, "extract-path-edit.png");
+            extractionOptions.FindControl<Button>("BrowseDestinationButton")!.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Check(destinationPreview.IsVisible && extractionVm.Destination == longDestination && extractionVm.ValidateDestination(),
+                "Leaving destination editing preserves its full validated path");
             string browserRoot = Path.Combine(temporary, "folder browser");
             Directory.CreateDirectory(Path.Combine(browserRoot, "Target"));
             var folderNode = new ExtractionFolderNode("Test folders", browserRoot, CancellationToken.None);

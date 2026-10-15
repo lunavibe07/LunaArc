@@ -1,7 +1,7 @@
 ﻿<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:vm="using:LunaArc.Studio.ViewModels"
  x:Class="LunaArc.Studio.Views.ExtractOptionsWindow" x:DataType="vm:ExtractionOptionsViewModel"
- Title="Extraction path and options - LunaArc" Width="640" Height="660" MinWidth="600" MinHeight="630"
+ Title="Extraction path and options - LunaArc" Width="560" Height="650" MinWidth="540" MinHeight="630"
  WindowStartupLocation="CenterOwner" RequestedThemeVariant="Dark"
  Background="#252525" FontFamily="Segoe UI,Inter" FontSize="12">
  <Window.Styles>
@@ -9,6 +9,7 @@
   <Style Selector="RadioButton"><Setter Property="MinHeight" Value="27"/><Setter Property="FontSize" Value="12"/></Style>
   <Style Selector="CheckBox"><Setter Property="MinHeight" Value="28"/><Setter Property="FontSize" Value="12"/></Style>
   <Style Selector="TabItem"><Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="28"/></Style>
+  <Style Selector="TextBox.destinationPath:not(:focus)"><Setter Property="Foreground" Value="Transparent"/></Style>
   <Style Selector="TreeViewItem" x:DataType="vm:ExtractionFolderNode"><Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/></Style>
  </Window.Styles>
  <Grid Margin="12" RowDefinitions="*,Auto">
@@ -17,8 +18,11 @@
     <Grid Margin="10,12,10,8" RowDefinitions="Auto,Auto,*,Auto">
      <TextBlock Text="Destination path (will be created if it does not exist)" Margin="0,0,0,6"/>
      <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
-      <TextBox Name="DestinationBox" Text="{Binding Destination}" MinHeight="30" VerticalContentAlignment="Center"/>
-      <Button Name="BrowseDestinationButton" Grid.Column="1" Content="Browse..." Click="OnBrowse" Margin="8,0,0,0" Width="96"/>
+      <Grid ToolTip.Tip="{Binding Destination}">
+       <TextBox Name="DestinationBox" Classes="destinationPath" Text="{Binding Destination}" MinHeight="30" VerticalContentAlignment="Center" GotFocus="OnDestinationFocused" LostFocus="OnDestinationUnfocused"/>
+       <TextBlock Name="DestinationPreview" Text="{Binding DestinationPreview}" IsVisible="{Binding !IsFocused, ElementName=DestinationBox}" IsHitTestVisible="False" Margin="9,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+      </Grid>
+      <Button Name="BrowseDestinationButton" Grid.Column="1" Content="Browse..." Click="OnBrowse" Margin="8,0,0,0" Width="88"/>
      </Grid>
      <Grid Grid.Row="2" ColumnDefinitions="*,12,*">
       <StackPanel Spacing="12">
