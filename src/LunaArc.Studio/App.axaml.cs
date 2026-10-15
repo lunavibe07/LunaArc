@@ -49,6 +49,20 @@ public partial class App : Application
                     finally { session.Dispose(); desktop.Shutdown(); }
                 };
             }
+            else if (request != null && StandaloneCompressionSession.IsCompressionAction(request.Action))
+            {
+                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                var session = new StandaloneCompressionSession();
+                desktop.MainWindow = session.ProgressWindow;
+                bool started = false;
+                session.ProgressWindow.Opened += async (_, _) =>
+                {
+                    if (started) return;
+                    started = true;
+                    try { await session.RunAsync(request); }
+                    finally { session.Dispose(); desktop.Shutdown(); }
+                };
+            }
             else
             {
                 var vm = new MainWindowViewModel();

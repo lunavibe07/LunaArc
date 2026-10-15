@@ -478,6 +478,7 @@ internal static class Program
 
             window.Hide();
             StandaloneExtractionChecks.Run(temporary, archivePath, larcOutput, "synthetic-created-password", Check, Capture);
+            StandaloneCompressionChecks.Run(temporary, Check, Capture);
             window.Show();
             var compactVm = new MainWindowViewModel();
             var compact = new MainWindow { DataContext = compactVm, Width = 720, Height = 440 };

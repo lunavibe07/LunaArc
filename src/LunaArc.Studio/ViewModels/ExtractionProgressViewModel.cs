@@ -7,6 +7,7 @@ namespace LunaArc.Studio.ViewModels;
 public partial class ExtractionProgressViewModel : ObservableObject, IDisposable
 {
     public LunaJobController Controller { get; } = new();
+    public string CancellationMessage { get; init; } = "Cancelling extraction...";
     [ObservableProperty] private string _archiveName = string.Empty;
     [ObservableProperty] private string _statusMessage = "Checking archive encryption...";
     [ObservableProperty] private double _progressPercent;
@@ -28,7 +29,7 @@ public partial class ExtractionProgressViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public void CloseOrCancel()
     {
-        if (IsWorking) { Controller.Cancel(); StatusMessage = "Cancelling extraction..."; }
+        if (IsWorking) { Controller.Cancel(); StatusMessage = CancellationMessage; }
         else CloseRequested?.Invoke();
     }
     public void Finish(string message)

@@ -7,6 +7,7 @@ namespace LunaArc.Studio.Views;
 
 public partial class ArchiveOptionsWindow : Window
 {
+    private TaskCompletionSource<bool>? _standaloneResult;
     private readonly MainWindowViewModel? _settings;
     public CompressionOptionsViewModel Options => (CompressionOptionsViewModel)DataContext!;
     public string OutputPath => Options.ArchiveName;
@@ -15,13 +16,21 @@ public partial class ArchiveOptionsWindow : Window
     {
         _settings = settings;
         DataContext = new CompressionOptionsViewModel(settings, sources);
-        Closed += (_, _) => Options.PasswordInput = string.Empty;
+        Closed += (_, _) => { Options.PasswordInput = string.Empty; _standaloneResult?.TrySetResult(false); };
+    }
+    public Task<bool> ShowStandaloneAsync()
+    {
+        _standaloneResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Show();
+        return _standaloneResult.Task;
     }
     private void OnAcceptClicked(object? sender, RoutedEventArgs e)
     {
         if (!Options.Validate()) return;
         if (_settings != null) Options.ApplyTo(_settings);
-        Close(true);
+        if (_standaloneResult != null) { _standaloneResult.TrySetResult(true); Close(); }
+        else Close(true);
     }
     private void OnCancelClicked(object? sender, RoutedEventArgs e) => Close(false);
     private async void OnBrowse(object? sender, RoutedEventArgs e)
