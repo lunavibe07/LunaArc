@@ -106,6 +106,7 @@ Build Windows setup/portable packages via `installers/build_windows_packages.ps1
 
 - Ignore `bin/`, `obj/`, `dist/`, `.tools/`, temporary archives/parts and private user configuration unless a fixture/release purpose is explicit.
 - For code, configuration or documentation changes, create/update `task/change-logs/YYYYMMDD-HHMMSS-short-description.md` using the user's session timezone.
+- Keep `task/` local and ignored by Git. Never stage or upload task notes; the project owner explicitly requested this.
 - Include request, affected files, before/after behavior, root cause when applicable, actual checks/evidence, limitations/risks and release status.
 - Do not upload, sign, deploy or publicly release artifacts outside the requested scope.
 - Final reports should lead with the outcome and identify relevant changed files, validation and remaining limits. Distinguish source review, compilation, smoke checks, publish, GUI startup, native OS runtime and CI execution.

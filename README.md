@@ -37,6 +37,7 @@ The supplied Luna logo is used for application windows, Windows executable/Setup
 
 - **Open** loads an archive; **Add** selects files and opens the format, level, password and comment dialog before saving a new archive.
 - **Extract To**, **Test** and **View** use the existing archive backend. Archive-only commands stay disabled until an archive is open; View also requires a selection.
+- **Extract To** and Explorer's **Extract files...** share a dark extraction dialog with a destination path, lazy folder tree, **Browse...**, **New folder**, and **General / Password** tabs. Choose ask, overwrite, skip, automatic rename or replace-only-older conflict handling; skip is the default. Ask opens a per-file Overwrite / Skip / Rename / Cancel dialog. Optionally display the destination folder after successful extraction. New folder creates a folder immediately; cancelling extraction does not remove folders you created.
 - Double-click a folder to browse it; **Up** returns to its parent. Double-click a file to preview it.
 - **Find** / **F3** filters names in the current folder without changing archive contents. Size columns sort by numeric byte counts.
 - **Info** shows the current archive path, folder/file summary and available comment. **Options** opens compression/password settings; cancelling restores the previous settings.
@@ -119,7 +120,7 @@ Extract the portable package into a permanent folder, then double-click **Instal
 
 Version 1.3 groups commands under **LunaArc**, with **Open with LunaArc**, **Extract files...**, **Extract to folder**, and **Extract Here** in that order. The modern menu names the destination dynamically, such as **Extract to "Sample archive\\"**. Other files and directories offer **Add to archive...** and **Add to ZIP archive...**. Only one selected filesystem item is supported; multi-selection and folder backgrounds are not supported.
 
-**Extract files...** opens a destination/password dialog. The other extraction actions open LunaArc with progress and use either the archive's parent directory or an archive-named folder; protected archives also open the password/options dialog. Existing files are skipped by default. Uncheck **Skip existing files** in the dialog only when replacement is intended. Compression commands open the existing creation-options and save dialogs.
+**Extract files...** opens the extraction path/options dialog. The other extraction actions open LunaArc with progress and use either the archive's parent directory or an archive-named folder; protected archives also open the password/options dialog. Existing files are skipped by default. Select **Overwrite without prompt** only when replacement is intended, or use **Ask before overwrite** to decide per file. Compression commands open the existing creation-options and save dialogs.
 
 The optional **Windows 11 menu preview** uses a native C++ `IExplorerCommand` DLL and a sparse identity package, following [Microsoft's Explorer extension model](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer). Enable it using **InstallWindows11Menu.cmd**, or select the additional Windows 11 menu task in Setup. Portable registration shows the signer and certificate thumbprint and asks for **YES** before adding trust. The Setup task explicitly opts into the same certificate trust.
 

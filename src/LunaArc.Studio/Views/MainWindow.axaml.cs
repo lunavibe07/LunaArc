@@ -4,6 +4,8 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using LunaArc.Studio.ViewModels;
 using LunaArc.Shell;
+using LunaArc.Core.Contracts;
+using Avalonia.Threading;
 
 namespace LunaArc.Studio.Views;
 
@@ -42,11 +44,11 @@ public partial class MainWindow : Window
                 await Vm.OpenArchiveFileAsync(request.Path);
                 if (Vm.CurrentArchivePath != request.Path || Vm.HasEncryptedEntries)
                     choice = await new ExtractOptionsWindow(request.ExtractionDirectory).ShowDialog<ExtractionChoice?>(this);
-                else choice = new(request.ExtractionDirectory, string.Empty, true);
+                else choice = new(request.ExtractionDirectory, string.Empty, OverwriteMode.SkipExisting);
             }
             if (choice == null) { Vm.StatusMessage = "Extraction cancelled."; return; }
-            if (await Vm.OpenArchiveFileAsync(request.Path, choice.Password))
-                await Vm.ExtractCurrentArchiveToAsync(choice.Destination, choice.SkipExisting);
+            if (await Vm.OpenArchiveFileAsync(request.Path, choice.Password.Length > 0 ? choice.Password : null))
+                await RunExtractionAsync(choice);
         }
         catch (Exception ex) { Vm.StatusMessage = "Explorer command failed: " + ex.Message; }
     }
@@ -78,18 +80,43 @@ public partial class MainWindow : Window
     private async void OnExtractToClicked(object? sender, RoutedEventArgs e)
     {
         if (Vm == null || !Vm.CanUseArchive) return;
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "Select extraction folder",
-            AllowMultiple = false
-        });
+        string destination = Path.Combine(Path.GetDirectoryName(Vm.CurrentArchivePath)!, ExplorerRequest.GetFolderName(Vm.CurrentArchivePath));
+        var choice = await new ExtractOptionsWindow(destination).ShowDialog<ExtractionChoice?>(this);
+        if (choice == null) return;
+        if (choice.Password.Length > 0 && !await Vm.OpenArchiveFileAsync(Vm.CurrentArchivePath, choice.Password)) return;
+        await RunExtractionAsync(choice);
+    }
 
-        if (folders.Count > 0)
+    private async Task RunExtractionAsync(ExtractionChoice choice)
+    {
+        if (Vm == null) return;
+        bool success = await Vm.ExtractCurrentArchiveToAsync(choice.Destination, choice.OverwriteMode,
+            path => Dispatcher.UIThread.InvokeAsync(() => ConfirmOverwriteAsync(path)).GetAwaiter().GetResult());
+        if (success && choice.DisplayAfterExtraction)
         {
-            string? destPath = folders[0].TryGetLocalPath();
-            if (!string.IsNullOrEmpty(destPath))
-                await Vm.ExtractCurrentArchiveToAsync(destPath);
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(choice.Destination) { UseShellExecute = true }); }
+            catch (Exception ex) { Vm.StatusMessage = "Extraction completed; could not display the folder: " + ex.Message; }
         }
+    }
+
+    private async Task<OverwriteMode> ConfirmOverwriteAsync(string path)
+    {
+        var dialog = new Window { Title = "File already exists", Width = 460, SizeToContent = SizeToContent.Height,
+            CanResize = false, FontSize = 12, Background = Avalonia.Media.Brush.Parse("#252525"),
+            WindowStartupLocation = WindowStartupLocation.CenterOwner, RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark };
+        var buttons = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        foreach (var (label, mode) in new[] { ("Overwrite", OverwriteMode.OverwriteAll), ("Skip", OverwriteMode.SkipExisting), ("Rename", OverwriteMode.AutoRename) })
+        {
+            var button = new Button { Content = label, Name = "Conflict" + label };
+            button.Click += (_, _) => dialog.Close((OverwriteMode?)mode);
+            buttons.Children.Add(button);
+        }
+        var cancel = new Button { Content = "Cancel", IsCancel = true };
+        cancel.Click += (_, _) => dialog.Close();
+        buttons.Children.Add(cancel);
+        dialog.Content = new StackPanel { Margin = new Avalonia.Thickness(18), Spacing = 16, Children =
+        { new TextBlock { Text = "A file with this name already exists:\n\n" + path + "\n\nChoose how to handle this file.", TextWrapping = Avalonia.Media.TextWrapping.Wrap }, buttons } };
+        return await dialog.ShowDialog<OverwriteMode?>(this) ?? throw new OperationCanceledException();
     }
 
     private async void OnCompressFilesClicked(object? sender, RoutedEventArgs e)

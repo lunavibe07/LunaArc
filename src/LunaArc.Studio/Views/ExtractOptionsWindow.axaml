@@ -1,19 +1,81 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- x:Class="LunaArc.Studio.Views.ExtractOptionsWindow" Title="Extraction options - LunaArc"
- Width="530" Height="290" CanResize="False" WindowStartupLocation="CenterOwner"
- Background="#F5F5F5" FontFamily="Segoe UI,Inter" FontSize="12">
- <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
-  <TextBlock Text="Destination folder" FontWeight="SemiBold"/>
-  <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,8,0,14">
-   <TextBox Name="DestinationBox"/>
-   <Button Name="BrowseDestinationButton" Grid.Column="1" Content="Browse..." Click="OnBrowse" Margin="8,0,0,0"/>
+﻿<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:vm="using:LunaArc.Studio.ViewModels"
+ x:Class="LunaArc.Studio.Views.ExtractOptionsWindow" x:DataType="vm:ExtractionOptionsViewModel"
+ Title="Extraction path and options - LunaArc" Width="640" Height="550" MinWidth="600" MinHeight="520"
+ WindowStartupLocation="CenterOwner" RequestedThemeVariant="Dark"
+ Background="#252525" FontFamily="Segoe UI,Inter" FontSize="12">
+ <Window.Styles>
+  <Style Selector="Button"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="12,3"/></Style>
+  <Style Selector="RadioButton"><Setter Property="MinHeight" Value="27"/><Setter Property="FontSize" Value="12"/></Style>
+  <Style Selector="CheckBox"><Setter Property="MinHeight" Value="28"/><Setter Property="FontSize" Value="12"/></Style>
+  <Style Selector="TabItem"><Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="28"/></Style>
+  <Style Selector="TreeViewItem" x:DataType="vm:ExtractionFolderNode"><Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/></Style>
+ </Window.Styles>
+ <Grid Margin="12" RowDefinitions="*,Auto">
+  <TabControl Name="ExtractionTabs">
+   <TabItem Header="General">
+    <Grid Margin="10,12,10,8" RowDefinitions="Auto,Auto,*,Auto">
+     <TextBlock Text="Destination path (will be created if it does not exist)" Margin="0,0,0,6"/>
+     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+      <TextBox Name="DestinationBox" Text="{Binding Destination}" MinHeight="30" VerticalContentAlignment="Center"/>
+      <Button Name="BrowseDestinationButton" Grid.Column="1" Content="Browse..." Click="OnBrowse" Margin="8,0,0,0" Width="96"/>
+     </Grid>
+     <Grid Grid.Row="2" ColumnDefinitions="*,12,*">
+      <StackPanel Spacing="12">
+       <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
+        <StackPanel>
+         <TextBlock Text="Overwrite mode" FontWeight="SemiBold" Margin="0,0,0,5"/>
+         <RadioButton Name="AskOverwriteRadio" GroupName="Overwrite" Content="Ask before overwrite" IsChecked="{Binding AskBeforeOverwrite}"/>
+         <RadioButton Name="OverwriteAllRadio" GroupName="Overwrite" Content="Overwrite without prompt" IsChecked="{Binding OverwriteAll}"/>
+         <RadioButton Name="SkipExistingBox" GroupName="Overwrite" Content="Skip existing files" IsChecked="{Binding SkipExisting}"/>
+         <RadioButton Name="RenameRadio" GroupName="Overwrite" Content="Rename automatically" IsChecked="{Binding RenameAutomatically}"/>
+         <RadioButton Name="UpdateNewerRadio" GroupName="Overwrite" Content="Replace only older files" IsChecked="{Binding UpdateNewer}"/>
+        </StackPanel>
+       </Border>
+       <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
+        <StackPanel>
+         <TextBlock Text="Miscellaneous" FontWeight="SemiBold" Margin="0,0,0,5"/>
+         <CheckBox Name="DisplayAfterExtractionBox" Content="Display files after extraction" IsChecked="{Binding DisplayAfterExtraction}"/>
+        </StackPanel>
+       </Border>
+       <TextBlock Text="Existing files are preserved by default. Use the Password tab for encrypted archives." TextWrapping="Wrap" Foreground="#BDBDBD"/>
+      </StackPanel>
+      <Grid Grid.Column="2" RowDefinitions="Auto,*">
+       <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+        <TextBlock Text="Folders" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <Button Name="NewFolderButton" Grid.Column="1" Content="New folder" Click="OnNewFolder"/>
+       </Grid>
+       <Border Grid.Row="1" BorderBrush="#737373" BorderThickness="1" Background="#202020">
+        <TreeView Name="DestinationTree" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}">
+         <TreeView.ItemTemplate>
+          <TreeDataTemplate DataType="vm:ExtractionFolderNode" ItemsSource="{Binding Children}">
+           <StackPanel Orientation="Horizontal" Spacing="7" ToolTip.Tip="{Binding Error}">
+            <PathIcon Width="14" Height="12" Foreground="#EBC45B" Data="M1,2 L6,2 L8,4 L15,4 L15,13 L1,13 Z"/>
+            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+           </StackPanel>
+          </TreeDataTemplate>
+         </TreeView.ItemTemplate>
+        </TreeView>
+       </Border>
+      </Grid>
+     </Grid>
+     <TextBlock Grid.Row="3" Name="ExtractionValidation" Text="{Binding Status}" TextWrapping="Wrap" Foreground="#FFD18B" Margin="0,10,0,0"/>
+    </Grid>
+   </TabItem>
+   <TabItem Header="Password">
+    <StackPanel Margin="14" Spacing="10">
+     <TextBlock Text="Archive password" FontSize="16" FontWeight="SemiBold"/>
+     <TextBlock Text="Enter the password supplied with the archive. Leave blank to use the password already unlocked for this archive." TextWrapping="Wrap" Foreground="#BDBDBD"/>
+     <TextBox Name="ExtractionPasswordBox" Text="{Binding Password}" PasswordChar="{Binding PasswordCharacter}" Watermark="Password (if required)"/>
+     <CheckBox Name="ShowExtractionPasswordBox" Content="Show password" IsChecked="{Binding ShowPassword}"/>
+     <TextBlock Text="The password is cleared when this dialog closes." Foreground="#BDBDBD"/>
+    </StackPanel>
+   </TabItem>
+  </TabControl>
+  <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,12,0,0">
+   <Button Name="StartExtractionButton" Grid.Column="1" Content="OK" Width="85" IsDefault="True" Click="OnExtract"/>
+   <Button Name="CancelExtractionButton" Grid.Column="2" Content="Cancel" Width="85" Margin="8,0,0,0" IsCancel="True" Click="OnCancel"/>
+   <Button Grid.Column="3" Content="Help" Width="85" Margin="8,0,0,0" Click="OnHelp"/>
   </Grid>
-  <TextBlock Grid.Row="2" Text="Archive password (if required)"/>
-  <TextBox Name="ExtractionPasswordBox" Grid.Row="3" PasswordChar="●" Margin="0,8,0,12"/>
-  <CheckBox Name="SkipExistingBox" Grid.Row="4" Content="Skip existing files" IsChecked="True"/>
-  <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-   <Button Name="StartExtractionButton" Content="Extract" IsDefault="True" Click="OnExtract"/>
-   <Button Name="CancelExtractionButton" Content="Cancel" IsCancel="True" Click="OnCancel"/>
-  </StackPanel>
  </Grid>
 </Window>

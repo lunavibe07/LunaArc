@@ -103,9 +103,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             StatusMessage = $"Reading catalog {Path.GetFileName(archivePath)}...";
             var sw = Stopwatch.StartNew();
 
-            string? pwd = recoveredPassword ?? (string.IsNullOrEmpty(PasswordInput) ? null : PasswordInput);
+            string? sessionPassword = recoveredPassword ?? (archivePath == CurrentArchivePath ? _recoveredSessionPassword : null);
+            string? pwd = sessionPassword ?? (string.IsNullOrEmpty(PasswordInput) ? null : PasswordInput);
             _currentArena = await _backend.ReadCatalogAsync(archivePath, pwd);
-            _recoveredSessionPassword = recoveredPassword;
+            _recoveredSessionPassword = sessionPassword;
             CurrentArchivePath = archivePath;
             _folderHistory.Clear();
             _currentParentIndex = -1;
@@ -261,13 +262,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    public async Task ExtractCurrentArchiveToAsync(string destinationFolder, bool skipExisting = false)
+    public Task<bool> ExtractCurrentArchiveToAsync(string destinationFolder, bool skipExisting = false) =>
+        ExtractCurrentArchiveToAsync(destinationFolder, skipExisting ? OverwriteMode.SkipExisting : OverwriteMode.OverwriteAll);
+
+    public async Task<bool> ExtractCurrentArchiveToAsync(string destinationFolder, OverwriteMode overwriteMode,
+        Func<string, OverwriteMode>? onConflict = null)
     {
-        if (IsBusy) return;
+        if (IsBusy) return false;
         if (string.IsNullOrWhiteSpace(CurrentArchivePath) || !File.Exists(CurrentArchivePath))
         {
             StatusMessage = "⚠️ Open an archive before extracting.";
-            return;
+            return false;
         }
 
         _activeJob = new LunaJobController();
@@ -288,7 +293,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     Password = ArchivePassword,
                     SelectedEntries = selectedSet,
                     SmartFolderCreation = false,
-                    OverwriteMode = skipExisting ? OverwriteMode.SkipExisting : OverwriteMode.OverwriteAll
+                    OverwriteMode = overwriteMode,
+                    OnFileConflictCallback = onConflict
                 },
                 _activeJob,
                 (done, total, file) =>
@@ -298,6 +304,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
             ProgressPercent = 100;
             StatusMessage = $"✅ Extracted to: {destinationFolder}";
+            return true;
         }
         catch (OperationCanceledException)
         {
@@ -313,6 +320,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             _activeJob?.Dispose();
             _activeJob = null;
         }
+        return false;
     }
 
     public async Task CompressFilesToArchiveAsync(IReadOnlyList<string> sourcePaths, string outputArchivePath)

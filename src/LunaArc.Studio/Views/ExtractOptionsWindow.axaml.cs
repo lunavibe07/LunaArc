@@ -1,32 +1,69 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using LunaArc.Core.Contracts;
+using LunaArc.Studio.ViewModels;
 
 namespace LunaArc.Studio.Views;
 
-public sealed record ExtractionChoice(string Destination, string Password, bool SkipExisting);
+public sealed record ExtractionChoice(string Destination, string Password, OverwriteMode OverwriteMode, bool DisplayAfterExtraction = false);
 public partial class ExtractOptionsWindow : Window
 {
     public ExtractOptionsWindow()
     {
         InitializeComponent();
-        Closed += (_, _) => this.FindControl<TextBox>("ExtractionPasswordBox")!.Text = string.Empty;
+        DataContext = new ExtractionOptionsViewModel(string.Empty);
+        Closed += (_, _) => { Vm.Dispose(); this.FindControl<TextBox>("ExtractionPasswordBox")!.Text = string.Empty; };
     }
     public ExtractOptionsWindow(string destination) : this() =>
-        this.FindControl<TextBox>("DestinationBox")!.Text = destination;
+        Vm.Destination = destination;
+    private ExtractionOptionsViewModel Vm => (ExtractionOptionsViewModel)DataContext!;
     private async void OnBrowse(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         { Title = "Choose extraction folder", AllowMultiple = false });
         if (folders.Count > 0 && folders[0].TryGetLocalPath() is { } path)
-            this.FindControl<TextBox>("DestinationBox")!.Text = path;
+            Vm.Destination = path;
     }
     private void OnExtract(object? sender, RoutedEventArgs e)
     {
-        string destination = this.FindControl<TextBox>("DestinationBox")!.Text ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(destination)) { this.FindControl<TextBox>("DestinationBox")!.Focus(); return; }
-        Close(new ExtractionChoice(destination, this.FindControl<TextBox>("ExtractionPasswordBox")!.Text ?? string.Empty,
-            this.FindControl<CheckBox>("SkipExistingBox")!.IsChecked == true));
+        if (!Vm.ValidateDestination()) { this.FindControl<TabControl>("ExtractionTabs")!.SelectedIndex = 0; this.FindControl<TextBox>("DestinationBox")!.Focus(); return; }
+        Close(new ExtractionChoice(Vm.Destination, Vm.Password, Vm.OverwriteMode, Vm.DisplayAfterExtraction));
     }
+    private async void OnNewFolder(object? sender, RoutedEventArgs e)
+    {
+        if (!Vm.ValidateDestination()) return;
+        var dialog = CreateSmallDialog("New folder");
+        var name = new TextBox { Name = "NewFolderName", Watermark = "Folder name" };
+        var create = new Button { Name = "CreateFolderButton", Content = "Create", IsDefault = true };
+        var cancel = new Button { Content = "Cancel", IsCancel = true };
+        cancel.Click += (_, _) => dialog.Close();
+        create.Click += async (_, _) =>
+        {
+            create.IsEnabled = false;
+            if (await Vm.CreateFolderAsync(name.Text ?? string.Empty)) dialog.Close();
+            else { create.IsEnabled = true; name.Focus(); }
+        };
+        var error = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        error.Bind(TextBlock.TextProperty, new Avalonia.Data.Binding(nameof(Vm.Status)) { Source = Vm });
+        dialog.Content = new StackPanel { Margin = new Avalonia.Thickness(18), Spacing = 12, Children =
+        { new TextBlock { Text = "Create a folder inside the destination path." }, name, error,
+            new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Children = { create, cancel } } } };
+        await dialog.ShowDialog(this);
+    }
+    private async void OnHelp(object? sender, RoutedEventArgs e)
+    {
+        var dialog = CreateSmallDialog("Extraction help");
+        var close = new Button { Content = "Close", IsDefault = true, IsCancel = true };
+        close.Click += (_, _) => dialog.Close();
+        dialog.Content = new StackPanel { Margin = new Avalonia.Thickness(18), Spacing = 14, Children =
+        { new TextBlock { Text = "Choose a destination or select a folder in the tree. New folder creates a folder inside that destination.\n\nSkip existing files preserves files already on disk. Ask before overwrite prompts for each conflict. Rename automatically keeps both copies. Replace only older files compares modification times and still extracts new files.\n\nUse the Password tab for encrypted archives. Cancel leaves the archive unchanged.", TextWrapping = Avalonia.Media.TextWrapping.Wrap }, close } };
+        await dialog.ShowDialog(this);
+    }
+    private static Window CreateSmallDialog(string title) => new()
+    {
+        Title = title, Width = 440, SizeToContent = SizeToContent.Height, CanResize = false,
+        WindowStartupLocation = WindowStartupLocation.CenterOwner, RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark
+    };
     private void OnCancel(object? sender, RoutedEventArgs e) => Close();
 }

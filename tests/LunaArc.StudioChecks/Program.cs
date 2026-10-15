@@ -127,14 +127,89 @@ internal static class Program
             Task extraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
             Dispatcher.UIThread.RunJobs();
             var extractionOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
-            Check(extractionOptions.FindControl<CheckBox>("SkipExistingBox")!.IsChecked == true, "Explorer extraction defaults to preserving existing files");
+            Check(extractionOptions.FindControl<RadioButton>("SkipExistingBox")!.IsChecked == true, "Explorer extraction defaults to preserving existing files");
             Check(extractionOptions.FindControl<TextBox>("ExtractionPasswordBox")!.PasswordChar != '\0', "Extraction password masked");
+            var extractionVm = (ExtractionOptionsViewModel)extractionOptions.DataContext!;
+            string browserRoot = Path.Combine(temporary, "folder browser");
+            Directory.CreateDirectory(Path.Combine(browserRoot, "Target"));
+            var folderNode = new ExtractionFolderNode("Test folders", browserRoot, CancellationToken.None);
+            extractionVm.Folders.Insert(0, folderNode);
+            Pump(folderNode.LoadChildrenAsync());
+            folderNode.IsExpanded = true;
+            var targetNode = folderNode.Children.Single();
+            extractionOptions.FindControl<TreeView>("DestinationTree")!.SelectedItem = targetNode;
+            Dispatcher.UIThread.RunJobs();
+            Check(extractionVm.Destination == targetNode.Path, "Folder tree selection updates the destination path");
+            Click(extractionOptions.FindControl<Button>("NewFolderButton")!);
+            var folderDialog = extractionOptions.OwnedWindows.Single();
+            var folderContent = (StackPanel)folderDialog.Content!;
+            folderContent.Children.OfType<TextBox>().Single().Text = "Created folder";
+            Click(folderContent.Children.OfType<StackPanel>().Single().Children.OfType<Button>().First());
+            Pump(WaitUntilAsync(() => !extractionOptions.OwnedWindows.Any()));
+            Check(Directory.Exists(Path.Combine(targetNode.Path, "Created folder")) && extractionVm.Destination.EndsWith("Created folder"), "New folder dialog creates and selects the requested folder");
+            var invalidFolder = extractionVm.CreateFolderAsync("../escape");
+            Pump(invalidFolder);
+            Check(!invalidFolder.Result, "New folder rejects multi-segment names");
+            extractionOptions.FindControl<TabControl>("ExtractionTabs")!.SelectedIndex = 1;
+            extractionOptions.FindControl<CheckBox>("ShowExtractionPasswordBox")!.IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            Check(extractionOptions.FindControl<TextBox>("ExtractionPasswordBox")!.PasswordChar == '\0', "Password tab can reveal the entered password");
+            Capture(extractionOptions, "extract-password.png");
+            extractionOptions.FindControl<CheckBox>("ShowExtractionPasswordBox")!.IsChecked = false;
+            extractionOptions.FindControl<TabControl>("ExtractionTabs")!.SelectedIndex = 0;
             string chosenDestination = Path.Combine(temporary, "chosen extraction folder");
             extractionOptions.FindControl<TextBox>("DestinationBox")!.Text = chosenDestination;
-            Capture(extractionOptions, "extract-options.png");
             Click(extractionOptions.FindControl<Button>("StartExtractionButton")!);
             Pump(extraction);
             Check(File.Exists(Path.Combine(chosenDestination, "readme.md")), "Extract files command honors the chosen folder");
+
+            Task renameExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
+            Dispatcher.UIThread.RunJobs();
+            var renameOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            renameOptions.FindControl<TextBox>("DestinationBox")!.Text = chosenDestination;
+            renameOptions.FindControl<RadioButton>("RenameRadio")!.IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            Check(((ExtractionOptionsViewModel)renameOptions.DataContext!).RenameAutomatically && renameOptions.FindControl<RadioButton>("SkipExistingBox")!.IsChecked == false, "Overwrite radios choose one backend policy");
+            Capture(renameOptions, "extract-options.png");
+            renameOptions.Width = 600; renameOptions.Height = 520;
+            Dispatcher.UIThread.RunJobs();
+            Capture(renameOptions, "extract-compact.png");
+            Click(renameOptions.FindControl<Button>("StartExtractionButton")!);
+            Pump(renameExtraction);
+            Check(File.Exists(Path.Combine(chosenDestination, "readme (1).md")), "Rename extraction preserves existing files and writes another copy");
+
+            string askDestination = Path.Combine(temporary, "ask extraction");
+            Directory.CreateDirectory(askDestination);
+            File.WriteAllText(Path.Combine(askDestination, "readme.md"), "Keep original");
+            Task askExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
+            Dispatcher.UIThread.RunJobs();
+            var askOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            askOptions.FindControl<TextBox>("DestinationBox")!.Text = askDestination;
+            askOptions.FindControl<RadioButton>("AskOverwriteRadio")!.IsChecked = true;
+            Click(askOptions.FindControl<Button>("StartExtractionButton")!);
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any()));
+            var conflict = window.OwnedWindows.Single();
+            Check(conflict.Title == "File already exists", "Ask mode opens a conflict dialog from the extraction worker");
+            Capture(conflict, "extract-conflict.png");
+            var conflictButtons = ((StackPanel)conflict.Content!).Children.OfType<StackPanel>().Single();
+            Click(conflictButtons.Children.OfType<Button>().Single(button => button.Name == "ConflictSkip"));
+            Pump(askExtraction);
+            Check(File.ReadAllText(Path.Combine(askDestination, "readme.md")) == "Keep original" && !vm.IsBusy, "Conflict Skip preserves the original and restores idle state");
+            Task cancelConflictExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
+            Dispatcher.UIThread.RunJobs();
+            var cancelConflictOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            cancelConflictOptions.FindControl<TextBox>("DestinationBox")!.Text = askDestination;
+            cancelConflictOptions.FindControl<RadioButton>("AskOverwriteRadio")!.IsChecked = true;
+            Click(cancelConflictOptions.FindControl<Button>("StartExtractionButton")!);
+            Pump(WaitUntilAsync(() => window.OwnedWindows.Any()));
+            var cancelConflict = window.OwnedWindows.Single();
+            var cancelConflictButtons = ((StackPanel)cancelConflict.Content!).Children.OfType<StackPanel>().Single();
+            Click(cancelConflictButtons.Children.OfType<Button>().Single(button => button.IsCancel));
+            Pump(cancelConflictExtraction);
+            Check(!vm.IsBusy && vm.StatusMessage.Contains("cancelled") && File.ReadAllText(Path.Combine(askDestination, "readme.md")) == "Keep original", "Cancelling an overwrite prompt releases the job and preserves existing data");
+            Click(window.FindControl<Button>("ExtractButton")!);
+            Check(window.OwnedWindows.Single() is ExtractOptionsWindow, "Toolbar Extract To uses the same extraction dialog");
+            Click(((ExtractOptionsWindow)window.OwnedWindows.Single()).FindControl<Button>("CancelExtractionButton")!);
             File.WriteAllText(Path.Combine(temporary, "notes.txt"), "Existing notes must survive");
             Pump(window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.ExtractHere, archivePath)));
             Check(File.ReadAllText(Path.Combine(temporary, "notes.txt")) == "Existing notes must survive", "Extract Here preserves existing files by default");
@@ -176,6 +251,14 @@ internal static class Program
             Check(vm.StatusMessage.Contains("Archive test passed") && vm.PasswordInput.Length == 0, "Recovered session password is used for testing without changing compression settings");
             Pump(vm.ExtractCurrentArchiveToAsync(Path.Combine(temporary, "recovered-output")));
             Check(Directory.GetFiles(Path.Combine(temporary, "recovered-output"), "message.txt", SearchOption.AllDirectories).Length == 1, "Recovered session password is used for extraction");
+            Task recoveredDialogExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, vm.CurrentArchivePath));
+            Dispatcher.UIThread.RunJobs();
+            var recoveredOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            string recoveredDialogDestination = Path.Combine(temporary, "recovered-dialog-output");
+            recoveredOptions.FindControl<TextBox>("DestinationBox")!.Text = recoveredDialogDestination;
+            Click(recoveredOptions.FindControl<Button>("StartExtractionButton")!);
+            Pump(recoveredDialogExtraction);
+            Check(Directory.GetFiles(recoveredDialogDestination, "message.txt", SearchOption.AllDirectories).Length == 1, "Blank password in extraction dialog retains the current archive's unlocked password");
 
             var compactVm = new MainWindowViewModel();
             var compact = new MainWindow { DataContext = compactVm, Width = 720, Height = 440 };
@@ -210,6 +293,14 @@ internal static class Program
         }
         void Capture(Window target, string name)
         {
+            // Allow layout and tab transitions to reach the state being asserted.
+            var settle = System.Diagnostics.Stopwatch.StartNew();
+            while (settle.ElapsedMilliseconds < 220)
+            {
+                Dispatcher.UIThread.RunJobs();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                Thread.Sleep(10);
+            }
             using var frame = target.CaptureRenderedFrame() ?? throw new InvalidOperationException("No rendered UI frame.");
             frame.Save(Path.Combine(outputDirectory, name));
         }
@@ -232,5 +323,15 @@ internal static class Program
         }
         task.GetAwaiter().GetResult();
         Dispatcher.UIThread.RunJobs();
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        while (!condition())
+        {
+            if (timer.Elapsed > TimeSpan.FromSeconds(10)) throw new TimeoutException("Dialog did not become ready.");
+            await Task.Delay(10);
+        }
     }
 }
