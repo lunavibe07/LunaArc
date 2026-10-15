@@ -48,7 +48,13 @@ public partial class CompressionOptionsViewModel : ObservableObject
         for (int suffix = 1; File.Exists(path) || Directory.Exists(path); suffix++) path = Path.Combine(parent, $"{name} ({suffix}){Extension}");
         ArchiveName = path;
     }
-    partial void OnPasswordInputChanged(string value) => OnPropertyChanged(nameof(PasswordSummary));
+    partial void OnArchiveNameChanged(string value) => Status = string.Empty;
+    partial void OnArchiveCommentChanged(string value) => Status = string.Empty;
+    partial void OnPasswordInputChanged(string value)
+    {
+        OnPropertyChanged(nameof(PasswordSummary));
+        Status = string.Empty;
+    }
     partial void OnSelectedFormatIndexChanged(int value)
     {
         if (ArchiveName.Length == 0) return;

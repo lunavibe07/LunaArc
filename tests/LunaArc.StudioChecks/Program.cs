@@ -106,6 +106,7 @@ internal static class Program
             Click(zipOptions.FindControl<Button>("AcceptOptionsButton")!);
             Check(window.OwnedWindows.Contains(zipOptions) && zipOptions.Options.Status.Contains("already exists"), "General rejects an existing output archive without closing");
             zipOptions.Options.ArchiveName = Path.Combine(temporary, "Created from General.zip");
+            Check(zipOptions.Options.Status.Length == 0, "Correcting an archive path clears the stale validation error");
             zipOptions.FindControl<ComboBox>("LevelPicker")!.SelectedIndex = 5;
             zipOptions.FindControl<CheckBox>("TestCreatedArchiveBox")!.IsChecked = true;
             zipOptions.Options.ArchiveComment = "Synthetic General comment";
