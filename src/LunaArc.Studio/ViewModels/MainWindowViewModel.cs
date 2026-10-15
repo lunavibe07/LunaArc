@@ -479,13 +479,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             string cliExe = Path.Combine(baseDir, OperatingSystem.IsWindows() ? "luna-cli.exe" : "luna-cli");
             ShellRegistrarFactory.CreateForCurrentOs().RegisterContextMenuAndAssociations(guiExe, cliExe);
             StatusMessage = OperatingSystem.IsWindows()
-                ? "Context menus installed. Right-click an archive and choose Show more options on Windows 11."
+                ? "Classic menu installed. For the main Windows 11 menu, choose Tools > Enable Windows 11 right-click menu."
                 : "LunaArc shell integration registered.";
         }
         catch (Exception ex)
         {
             StatusMessage = $"❌ Shell registration error: {ex.Message}";
         }
+    }
+
+    public async Task EnableWindows11MenuAsync(bool trustCertificateConsent)
+    {
+        if (IsBusy || !trustCertificateConsent) return;
+        IsBusy = true;
+        try
+        {
+            StatusMessage = "Enabling the Windows 11 menu. Complete the Windows permission prompt if shown...";
+            await Windows11MenuInstaller.EnableAsync(AppContext.BaseDirectory, trustCertificateConsent);
+            StatusMessage = "Windows 11 menu enabled. Reopen Explorer windows; if Windows has cached the old menu, sign out and back in.";
+        }
+        catch (Exception ex) { StatusMessage = "Could not enable the Windows 11 menu: " + ex.Message; }
+        finally { IsBusy = false; }
     }
 
     private void HandleLiveFileEdited(string tempPath, string entryRelativePath)

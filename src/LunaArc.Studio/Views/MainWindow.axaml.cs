@@ -14,6 +14,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        this.FindControl<MenuItem>("Windows11MenuItem")!.IsVisible = Windows11MenuInstaller.IsSupported;
         SizeChanged += (_, _) => UpdateResponsiveLayout();
         Closed += (_, _) => Vm?.Dispose();
     }
@@ -55,6 +56,12 @@ public partial class MainWindow : Window
         UpdateResponsiveLayout();
     }
     private void OnToolsClicked(object? sender, RoutedEventArgs e) => this.FindControl<MenuItem>("ToolsMenu")!.IsSubMenuOpen = true;
+    private async void OnEnableWindows11MenuClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || Vm.IsBusy || !Windows11MenuInstaller.IsSupported) return;
+        if (await new Windows11MenuDialog().ShowDialog<bool>(this))
+            await Vm.EnableWindows11MenuAsync(trustCertificateConsent: true);
+    }
     private async void OnBrowseDestinationClicked(object? sender, RoutedEventArgs e)
     {
         if (Vm == null || !Vm.CanUseArchive) return;

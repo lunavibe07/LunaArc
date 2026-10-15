@@ -57,6 +57,7 @@
                     <MenuItem Name="UnlockArchiveMenu" Header="Unlock current archive" Click="OnUnlockArchiveClicked" IsEnabled="{Binding CanUseArchive}"/>
                     <MenuItem Name="RecoverPasswordMenu" Header="_Recover password..." Click="OnRecoverPasswordClicked" />
                     <MenuItem Header="Install Explorer context _menu" Command="{Binding RegisterOsShellMenuCommand}" />
+                    <MenuItem Name="Windows11MenuItem" Header="Enable Windows 11 right-click menu..." Click="OnEnableWindows11MenuClicked" />
                 </MenuItem>
                 <MenuItem Header="_Options">
                     <MenuItem Header="Compression options / _password..." Click="OnOptionsClicked" />

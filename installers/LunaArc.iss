@@ -66,6 +66,19 @@ begin
     RaiseException('LunaArc could not update the Explorer context menu. Exit code: ' + IntToStr(ResultCode));
 end;
 
+function EnableModernMenu: Boolean;
+var
+  Version: TWindowsVersion;
+begin
+  Result := WizardIsTaskSelected('modernmenu');
+  if Result then exit;
+  GetWindowsVersionEx(Version);
+  if WizardSilent or not WizardIsTaskSelected('contextmenu') or (Version.Build < 22000) then exit;
+  Result := MsgBox('Show LunaArc extraction commands in the main Windows 11 right-click menu?' + #13#10 + #13#10 +
+    'This preview uses a test signing certificate. Enabling it adds the supplied certificate to Windows Trusted People for all users. Windows may ask for administrator permission. Only certificate import is elevated; menu registration stays with your current account.' + #13#10 + #13#10 +
+    'Choose No to keep the classic menu under Show more options.', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
@@ -75,7 +88,7 @@ begin
       UpdateContextMenu('register-shell')
     else
       UpdateContextMenu('unregister-shell --if-path "' + ExpandConstant('{app}') + '"');
-    if WizardIsTaskSelected('modernmenu') then begin
+    if EnableModernMenu then begin
       if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
           '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\RegisterWindows11Menu.ps1') + '" -TrustCertificate',
           ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
