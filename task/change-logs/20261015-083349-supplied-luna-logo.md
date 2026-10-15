@@ -22,4 +22,12 @@ Use the project owner's supplied `anh.png` as LunaArc's logo. Version 1.3.1 repl
 
 ## Limits and release status
 
-Headless rendering does not show native title bars or Explorer. Complete native menu/Setup packaging and native Linux execution require the Windows/Linux CI jobs; local checks do not register shell integration or install certificates. CI results will be recorded after the source push.
+Headless rendering does not show native title bars or Explorer. Local checks do not register shell integration or install certificates.
+
+Implementation commit `dd4ed85` passed both native CI jobs in [run 38666513610](https://github.com/lunavibe07/LunaArc/actions/runs/38666513610):
+
+- Windows: Debug/Release builds, 126 archive/filesystem checks, 57 isolated shell checks and 47 rendered UI checks passed. Native menu build/sign/package succeeded with 61 direct COM checks. Setup/Portable lifecycle verification passed, including logo PNG/ICO equality, classic/modern registration, 64-check registered COM runs and installation-scoped cleanup on the disposable runner.
+- Ubuntu: Debug/Release builds, 127 archive/filesystem checks, 47 rendered UI checks, Linux self-contained publishing and the published CLI help command passed.
+- Uploaded version 1.3.1 Setup, Portable, checksums, raw Windows/Linux packages and UI preview artifacts. Setup artifact `11941541106`; Portable `11941481196`; Linux `11941316300`.
+
+The Windows lifecycle checks establish package/registration behavior, not a visually inspected Windows 11 Explorer menu. Linux CI verifies headless rendering and CLI execution, not a physical desktop launcher session.
