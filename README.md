@@ -33,7 +33,7 @@ Core uses SharpCompress 0.50.5 and ZstdSharp.Port 0.8.1. Published packages incl
 
 Since version 1.1, LunaArc uses a light, classic desktop layout: menu bar, large toolbar icons, archive path, resizable/sortable file columns and a status bar. The layout is inspired by familiar archive managers while retaining LunaArc branding.
 
-The supplied Luna logo is used for application windows, Windows executable/Setup/Explorer icons and the Linux launcher. Open **Help > About LunaArc** to see it in the application. See [branding assets](branding/README.md) for the source and derived icon files.
+Version **1.4.5** replaces the logo with the supplied moon-and-sun infinity artwork (`anhnen.png`). The same logo is used for application windows, Windows executable/Setup/Explorer icons and the Linux launcher. Open **Help > About LunaArc** to see it in the application. See [branding assets](branding/README.md) for the original image and derived icon files.
 
 - **Open** loads an archive; **Add** selects files and opens the [General compression dialog](#create-an-archive) with the output name, format, method, password and comment controls.
 - **Extract To**, **Test** and **View** use the existing archive backend. Archive-only commands stay disabled until an archive is open; View also requires a selection.
