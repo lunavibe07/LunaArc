@@ -6,14 +6,14 @@ LunaArc is a Windows and Linux archive application built with .NET 8. It include
 
 ## Download
 
-Version **1.4.0**, adding SFX, solid 7z, recovery companions and advisory archive locks. Published standalone SFX execution and archive/UI checks passed natively on Windows and Linux; Windows Setup/Portable lifecycle checks also passed. See the [verified build run](https://github.com/lunavibe07/LunaArc/actions/runs/38682293226).
+Version **1.4.1**, with a compact extraction window and abbreviated destination preview. Includes SFX, solid 7z, recovery companions and advisory archive locks. Published standalone SFX execution and archive/UI checks passed natively on Windows and Linux; Windows Setup/Portable lifecycle checks also passed. See the [verified build run](https://github.com/lunavibe07/LunaArc/actions/runs/38683610403).
 
 | Edition | Download | Getting started |
 | --- | --- | --- |
-| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/actions/runs/38682293226/artifacts/11948309029) | Extract the downloaded artifact ZIP, then run `LunaArc-1.4.0-setup-win-x64.exe`. |
-| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/actions/runs/38682293226/artifacts/11947939168) | Extract the artifact ZIP and the portable ZIP inside it, then run `LunaArc.exe`. |
-| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/actions/runs/38682293226/artifacts/11947943960) | Extract the ZIP, run `chmod +x LunaArc luna-cli LunaArc.7zz`, then start `./LunaArc`. |
-| Windows SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/actions/runs/38682293226/artifacts/11948438834) | Extract `SHA256SUMS.txt` to verify the Setup EXE or portable ZIP. |
+| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/actions/runs/38683610403/artifacts/11949671369) | Extract the downloaded artifact ZIP, then run `LunaArc-1.4.1-setup-win-x64.exe`. |
+| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/actions/runs/38683610403/artifacts/11949101910) | Extract the artifact ZIP and the portable ZIP inside it, then run `LunaArc.exe`. |
+| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/actions/runs/38683610403/artifacts/11949735896) | Extract the ZIP, run `chmod +x LunaArc luna-cli LunaArc.7zz`, then start `./LunaArc`. |
+| Windows SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/actions/runs/38683610403/artifacts/11949321585) | Extract `SHA256SUMS.txt` to verify the Setup EXE or portable ZIP. |
 
 Sign in to GitHub to download Actions artifacts. These links are currently scheduled to expire on **January 13, 2027**. For newer builds, open [Build and verify](https://github.com/lunavibe07/LunaArc/actions/workflows/build.yml), choose a successful run and scroll to **Artifacts**. Linux Studio requires a graphical desktop and the system libraries listed under [Requirements](#requirements).
 
@@ -271,9 +271,9 @@ The current Windows checkout was checked with .NET SDK 8.0.426:
 - Debug and Release solution builds passed with zero warnings and zero errors.
 - 291 backend/archive checks passed on Windows; 293 passed on Ubuntu, including solid/non-solid 7z, SFX footer validation, recovery reconstruction/refusal, cancellation, locks and combined verified source deletion.
 - 57 isolated Registry checks verify cascading groups, command order/quoting, default applications, other applications' entries and scoped cleanup without changing Explorer configuration.
-- 92 rendered Studio checks passed locally, including General option bindings, 7z creation, recovery/lock companions, explicit unlock and exact-hash repair.
+- 95 rendered Studio checks passed locally, including General option bindings, 7z creation, recovery/lock companions, explicit unlock and exact-hash repair.
 - The version 1.4.0 `win-x64` managed-only self-contained publish succeeded. Published ZIP/LARC/7z CLI SFX files ran independently; recovery and lock/unlock checks passed. Complete Windows setup/menu packaging is verified separately by CI.
-- Native Ubuntu 24.04 build, 293 backend checks, 92 rendered UI checks and published standalone SFX execution passed in CI for version 1.4.0. Native OS file-picker dialogs and full GUI SFX desktop interaction remain outside the headless checks.
+- Native Ubuntu 24.04 build, 293 backend checks, 95 rendered UI checks and published standalone SFX execution passed in CI for version 1.4.1. Native OS file-picker dialogs and full GUI SFX desktop interaction remain outside the headless checks.
 
 CI results belong to the specific commit/run; review the Actions tab before downloading an artifact.
 
