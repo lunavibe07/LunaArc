@@ -37,13 +37,35 @@ The supplied Luna logo is used for application windows, Windows executable/Setup
 
 - **Open** loads an archive; **Add** selects files and opens the format, level, password and comment dialog before saving a new archive.
 - **Extract To**, **Test** and **View** use the existing archive backend. Archive-only commands stay disabled until an archive is open; View also requires a selection.
-- **Extract To** and Explorer's **Extract files...** share a dark extraction dialog with a destination path, lazy folder tree, **Browse...**, **New folder**, and **General / Password** tabs. Choose ask, overwrite, skip, automatic rename or replace-only-older conflict handling; skip is the default. Ask opens a per-file Overwrite / Skip / Rename / Cancel dialog. Optionally display the destination folder after successful extraction. New folder creates a folder immediately; cancelling extraction does not remove folders you created.
+- **Extract To** and Explorer's **Extract files...** share the [extraction path/options dialog](#extract-files), with destination browsing, a folder tree and password controls.
 - Double-click a folder to browse it; **Up** returns to its parent. Double-click a file to preview it.
 - **Find** / **F3** filters names in the current folder without changing archive contents. Size columns sort by numeric byte counts.
 - **Info** shows the current archive path, folder/file summary and available comment. **Options** opens compression/password settings; cancelling restores the previous settings.
 - **File** includes close archive and exit; **Tools** contains context-menu installation. **Ctrl+O** opens an archive.
 
 The interface lists archive contents; it is not a general system-drive file browser. Delete and Repair commands are not exposed because the backend does not implement archive editing/repair. Both installed and portable Windows editions have this same interface. Toolbar artwork comes from Microsoft Fluent UI System Icons; its MIT notice is included in every published folder.
+
+## Extract files
+
+Version **1.3.2** adds a dark extraction dialog with a folder tree and **General / Password** tabs, available in both Setup and Portable editions.
+
+1. Open an archive and select **Extract To**, or right-click an archive in Windows Explorer and choose **LunaArc > Extract files...**. On Windows 11, the classic menu may be under **Show more options**.
+2. In **General**, enter a full destination path, select a folder in the tree, or use **Browse...**. Expand a tree item to load its subfolders.
+3. Use **New folder** to create a folder inside the current destination. A destination that does not yet exist is created during extraction.
+4. Choose how to handle existing files using the table below. **Skip existing files** is selected by default.
+5. For an encrypted archive, enter its password in the **Password** tab. Leave it blank to reuse the password already unlocked for this archive. **Show password** reveals the input; closing the dialog clears it.
+6. Optionally enable **Display files after extraction** to open the destination in the system file manager after a successful extraction.
+7. Select **OK** to start, **Cancel** to close the options, or **Help** for a short explanation of the controls.
+
+| Overwrite mode | Behavior |
+| --- | --- |
+| Ask before overwrite | For each conflict, choose **Overwrite**, **Skip**, **Rename** or **Cancel**. Cancel stops the extraction job. |
+| Overwrite without prompt | Replace existing destination files. |
+| Skip existing files | Preserve existing files and extract files that are not already present. |
+| Rename automatically | Keep both copies, using a name such as `readme (1).txt` for the extracted copy. |
+| Replace only older files | Compare modification times and skip existing files that are equally new or newer when an archive timestamp is available. New files are also extracted. |
+
+**New folder** takes effect immediately. Cancelling does not delete folders you created or roll back files already extracted. The source archive is preserved.
 
 ## Password recovery and encrypted vault
 
