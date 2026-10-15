@@ -57,7 +57,7 @@ jobs:
           python installers/prepare_release.py release-input release-assets
           version=$(python -c "import xml.etree.ElementTree as E; print(E.parse('Directory.Build.props').findtext('.//Version'))")
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
-      - name: Publish immutable versioned assets
+      - name: Publish versioned assets
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.assets.outputs.tag }}

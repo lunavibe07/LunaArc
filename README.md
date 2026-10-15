@@ -6,16 +6,16 @@ LunaArc is a Windows and Linux archive application built with .NET 8. It include
 
 ## Download
 
-Version **2.0.1** makes the main Windows 11 right-click menu easier to enable: use **Tools > Enable Windows 11 right-click menu...**, the interactive Setup offer or the portable menu installer. Each route requires explicit consent before trusting the preview signing certificate; Windows may request administrator permission. Includes the **Nocturne Orbit** interface and existing archive features. Native Windows/Linux builds, 172 rendered UI checks on each OS, published archive checks and Windows Setup/Portable lifecycle checks passed. See the [verified build run](https://github.com/lunavibe07/LunaArc/actions/runs/38807293134).
+Version **2.1.0** adds streaming LARC payloads and encrypted ZIP64 for large files and entry counts. Includes **Nocturne Orbit**, offline Help and Windows 11 main-menu setup with explicit certificate consent. Native checks passed on Windows (353 archive/filesystem checks) and Linux (355), including actual encrypted ZIP creation and independent verification of a file larger than 4 GiB, plus 172 rendered UI checks per OS and Windows Setup/Portable lifecycle checks. Download the [published release](https://github.com/lunavibe07/LunaArc/releases/tag/v2.1.0), built from the [verified source run](https://github.com/lunavibe07/LunaArc/actions/runs/38810401931).
 
 | Edition | Download | Getting started |
 | --- | --- | --- |
-| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/actions/runs/38807293134/artifacts/12005974372) | Extract the downloaded artifact ZIP, then run `LunaArc-2.0.1-setup-win-x64.exe`. |
-| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/actions/runs/38807293134/artifacts/12007476095) | Extract the artifact ZIP and the portable ZIP inside it, then run `LunaArc.exe`. |
-| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/actions/runs/38807293134/artifacts/12007500867) | Extract the ZIP, run `chmod +x LunaArc luna-cli LunaArc.7zz`, then start `./LunaArc`. |
-| Windows SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/actions/runs/38807293134/artifacts/12007141386) | Extract `SHA256SUMS.txt` to verify the Setup EXE or portable ZIP. |
+| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/releases/download/v2.1.0/LunaArc-2.1.0-setup-win-x64.exe) | Run `LunaArc-2.1.0-setup-win-x64.exe` directly. |
+| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/releases/download/v2.1.0/LunaArc-2.1.0-portable-win-x64.zip) | Extract the ZIP into a folder, then run `LunaArc.exe`. |
+| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/releases/download/v2.1.0/LunaArc-2.1.0-linux-x64.tar.gz) | Extract the TAR.GZ into a folder, then start `./LunaArc`. Executable permissions are included. |
+| SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/releases/download/v2.1.0/SHA256SUMS.txt) | Verify the Setup EXE, portable ZIP or Linux TAR.GZ. |
 
-Sign in to GitHub to download Actions artifacts. These links are currently scheduled to expire on **January 14, 2027 (UTC+7)**. For newer builds, open [Build and verify](https://github.com/lunavibe07/LunaArc/actions/workflows/build.yml), choose a successful run and scroll to **Artifacts**. Linux Studio requires a graphical desktop and the system libraries listed under [Requirements](#requirements).
+Public Release downloads do not require signing in and are not subject to Actions artifact expiry. Visit [Latest release](https://github.com/lunavibe07/LunaArc/releases/latest) for future versions. Preview builds remain under [Build and verify](https://github.com/lunavibe07/LunaArc/actions/workflows/build.yml); their Actions artifacts require sign-in and expire. Linux Studio requires a graphical desktop and the system libraries listed under [Requirements](#requirements).
 
 ## Projects
 
@@ -241,7 +241,9 @@ Both editions contain identical `LunaArc.exe` and `luna-cli.exe` binaries, so ar
 | `LunaArc-Windows-Portable` | `LunaArc-<version>-portable-win-x64.zip` | Extract the inner ZIP, run `LunaArc.exe`, optionally run `InstallContextMenu.cmd` |
 | `LunaArc-Windows-Checksums` | `SHA256SUMS.txt` | SHA-256 checksums for both packages |
 
-GitHub Actions wraps each downloaded artifact in a ZIP; extract it to find the setup EXE or portable ZIP listed above. Setup installs per-user under `%LOCALAPPDATA%\Programs\LunaArc`, with Start menu and uninstall entries. The classic Explorer task is selected by default; the modern Windows 11 preview task is unchecked and explicitly describes certificate trust. Both editions ship the same GUI, CLI, native menu DLL, menu icon, sparse package, public certificate and registration scripts.
+GitHub Releases provides the Setup EXE and portable ZIP directly. Preview downloads from GitHub Actions still wrap each artifact in an additional ZIP. Setup installs per-user under `%LOCALAPPDATA%\Programs\LunaArc`, with Start menu and uninstall entries. The classic Explorer task is selected by default; the modern Windows 11 preview task is unchecked and explicitly describes certificate trust. Interactive Setup also offers modern-menu activation after classic integration. Both editions ship the same GUI, CLI, native menu DLL, menu icon, sparse package, public certificate and registration scripts.
+
+To publish a future version, first obtain a successful main-branch **Build and verify** run, then manually run **Publish verified release** with that run ID. The workflow rejects failed, fork, pull-request and non-main builds. It promotes the exact built binaries, verifies the Windows package checksums, packages Linux with executable modes and creates `SHA256SUMS.txt` for all three assets. A draft stages the complete assets before publication; an existing version is never overwritten by this workflow. Release tags point to the verified build commit.
 
 Uninstall removes menus only if they currently point to that installation. If a portable copy has since registered its own menu, uninstalling the installed edition preserves the portable menu. The most recently registered copy owns the common LunaArc commands; the two copies do not create duplicate menus. User-created archives and personal application-data files are not removed by the installer.
 
