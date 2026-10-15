@@ -303,9 +303,9 @@ The current Windows checkout was checked with .NET SDK 8.0.426:
 - Debug and Release solution builds passed with zero warnings and zero errors.
 - 409 backend/archive checks passed on Windows; 411 passed on Ubuntu, including solid/non-solid 7z, SFX footer validation, recovery reconstruction/refusal, cancellation, locks and combined verified source deletion.
 - 57 isolated Registry checks verify cascading groups, command order/quoting, default applications, other applications' entries and scoped cleanup without changing Explorer configuration.
-- 116 rendered Studio checks passed locally, including General option bindings, 7z creation, recovery/lock companions, explicit unlock and exact-hash repair.
-- The version 1.4.4 `win-x64` managed-only self-contained publish succeeded. Published ZIP/LARC/7z CLI SFX files ran independently; recovery and lock/unlock checks passed. Complete Windows setup/menu packaging is verified separately by CI.
-- Native Ubuntu 24.04 build, 313 backend checks, 116 rendered UI checks and published standalone SFX execution passed in CI for version 1.4.4. Native OS file-picker dialogs and full GUI SFX desktop interaction remain outside the headless checks.
+- 176 rendered Studio checks passed locally and on each native CI OS, including split-size bindings/validation and existing encryption, extraction, recovery, Help and responsive views.
+- Version 2.2.0 native Windows/Linux self-contained packages passed published encrypted LARC v2, ZIP/7z, TAR wrapper, split-set CLI, standalone SFX and GUI extraction lifecycle checks. Windows Setup/Portable equality, classic/modern registration, COM activation and scoped cleanup passed.
+- Native Ubuntu 24.04 passed 411 archive/filesystem and 176 rendered UI checks. Native OS file-picker dialogs and full interactive GUI SFX desktop behavior remain outside the automated checks.
 
 CI results belong to the specific commit/run; review the Actions tab before downloading an artifact.
 
