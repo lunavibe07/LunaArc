@@ -21,6 +21,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly Stack<int> _folderHistory = new();
     private readonly List<VfsRowItem> _folderRows = new();
     private int _currentParentIndex = -1;
+    private long _archivePackedBytes;
     private string? _recoveredSessionPassword;
     private string? ArchivePassword => _recoveredSessionPassword ??
         (string.IsNullOrEmpty(PasswordInput) ? null : PasswordInput);
@@ -29,7 +30,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(WindowTitle))]
     [NotifyPropertyChangedFor(nameof(HasArchive))]
     [NotifyPropertyChangedFor(nameof(CanUseArchive))]
+    [NotifyPropertyChangedFor(nameof(ArchiveDisplayName))]
+    [NotifyPropertyChangedFor(nameof(ArchiveSubtitle))]
+    [NotifyPropertyChangedFor(nameof(SelectionType))]
     private string _currentArchivePath = string.Empty;
+    [ObservableProperty] private string _extractionDestination = string.Empty;
+    public string ArchiveDisplayName => HasArchive ? Path.GetFileName(CurrentArchivePath) : "Your archives, in orbit.";
+    public string ArchiveSubtitle => HasArchive && _currentArena != null
+        ? $"{_currentArena.Count:N0} entries  |  {FormatSize(_archivePackedBytes)} packed" : "Open an archive or create something new.";
+    public string SelectionName => SelectedItem?.Name ?? "Archive details";
+    public string SelectionType => SelectedItem?.TypeDisplay ?? (HasArchive ? "Select a file or folder" : "No archive opened");
+    public string SelectionSize => SelectedItem?.OriginalSizeDisplay is { Length: > 0 } size ? size : "—";
+    public string SelectionPacked => SelectedItem?.CompressedSizeDisplay ?? "—";
+    public string SelectionModified => SelectedItem?.ModifiedDisplay ?? "—";
 
     [ObservableProperty]
     private string _breadcrumbPath = "Open an archive";
@@ -93,7 +106,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanViewSelection))]
+    [NotifyPropertyChangedFor(nameof(SelectionName))]
+    [NotifyPropertyChangedFor(nameof(SelectionType))]
+    [NotifyPropertyChangedFor(nameof(SelectionSize))]
+    [NotifyPropertyChangedFor(nameof(SelectionPacked))]
+    [NotifyPropertyChangedFor(nameof(SelectionModified))]
+    [NotifyPropertyChangedFor(nameof(SelectionIsFolder))]
     private VfsRowItem? _selectedItem;
+    public bool SelectionIsFolder => SelectedItem?.IsDirectory == true;
 
     public ObservableCollection<VfsRowItem> VisibleItems { get; } = new();
 
@@ -113,8 +133,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             string? sessionPassword = recoveredPassword ?? (archivePath == CurrentArchivePath ? _recoveredSessionPassword : null);
             string? pwd = sessionPassword ?? (string.IsNullOrEmpty(PasswordInput) ? null : PasswordInput);
             _currentArena = await _backend.ReadCatalogAsync(archivePath, pwd);
+            _archivePackedBytes = new FileInfo(archivePath).Length;
             _recoveredSessionPassword = sessionPassword;
             CurrentArchivePath = archivePath;
+            ExtractionDestination = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(archivePath))!, ExplorerRequest.GetFolderName(archivePath));
             _folderHistory.Clear();
             _currentParentIndex = -1;
             SearchQuery = string.Empty;
@@ -122,6 +144,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ArchiveComment = _currentArena.ArchiveComment;
 
             NavigateToFolder(-1);
+            OnPropertyChanged(nameof(ArchiveSubtitle));
             StatusMessage = $"✅ Loaded {_currentArena.Count:N0} entries in {sw.ElapsedMilliseconds} ms | Original size: {FormatSize(_currentArena.TotalUncompressedBytes)}";
             return true;
         }
@@ -166,8 +189,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 OriginalSizeBytes = node.UncompressedSize,
                 CompressedSizeBytes = node.CompressedSize,
                 OriginalSizeDisplay = node.IsDirectory ? string.Empty : FormatSize(node.UncompressedSize),
-                CompressedSizeDisplay = node.IsDirectory ? "-" : FormatSize(node.CompressedSize),
-                RatioDisplay = node.IsDirectory ? "-" : $"{node.CompressionRatio:0.0}%",
+                CompressedSizeDisplay = node.IsDirectory ? "-" : node.CompressedSize == 0 && node.UncompressedSize > 0 ? "—" : FormatSize(node.CompressedSize),
+                RatioDisplay = node.IsDirectory || node.CompressedSize == 0 && node.UncompressedSize > 0 ? "-" : $"{node.CompressionRatio:0.0}%",
                 CrcDisplay = node.IsDirectory ? "-" : $"{node.Crc32:X8}",
                 ModifiedDisplay = dt.ToString("yyyy-MM-dd HH:mm")
             });
@@ -199,6 +222,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _currentArena = null;
         _recoveredSessionPassword = null;
         CurrentArchivePath = string.Empty;
+        ExtractionDestination = string.Empty;
         _currentParentIndex = -1;
         _folderRows.Clear();
         _folderHistory.Clear();

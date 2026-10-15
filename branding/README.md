@@ -8,3 +8,5 @@
 The derived files preserve the original composition and colors. They were produced with System.Drawing using high-quality bicubic resizing; no background removal or redraw was applied. Builds copy these committed assets and do not generate a substitute logo.
 
 Studio embeds the ICO and 256-pixel PNG as Avalonia resources. Both GUI and CLI Windows executables embed the ICO. Inno Setup uses the same ICO, and the native Explorer menu package ships it as `LunaArc.Menu.ico`. Both publish scripts include the 256-pixel PNG as `LunaArc.png`; Linux desktop registration uses its absolute path when available.
+
+The Nocturne Orbit desktop theme embeds `src/LunaArc.Studio/Assets/NocturneBackground.png`, a generated 1487 x 1058 matte-navy background with sparse cyan/gold orbital accents, based on the owner's selected design concept. It contains no controls, text or replacement logo; all actual application controls and text are rendered by Avalonia. Icons continue to use the licensed Fluent geometry resources.

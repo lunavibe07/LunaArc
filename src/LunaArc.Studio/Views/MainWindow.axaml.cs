@@ -14,10 +14,57 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SizeChanged += (_, _) => UpdateResponsiveLayout();
         Closed += (_, _) => Vm?.Dispose();
     }
 
     private MainWindowViewModel? Vm => DataContext as MainWindowViewModel;
+    private bool _showMetadataColumns;
+    private void UpdateResponsiveLayout()
+    {
+        bool compact = ClientSize.Width < 1000;
+        this.FindControl<Grid>("WorkspaceGrid")!.ColumnDefinitions[0].Width = new GridLength(compact ? 100 : 140);
+        foreach (string name in new[] { "OpenButton", "AddButton", "ToolsButton", "HelpButton", "OptionsButton" })
+            this.FindControl<Button>(name)!.Width = compact ? 82 : 122;
+        this.FindControl<Grid>("ArchiveWorkspace")!.Margin = new Avalonia.Thickness(compact ? 22 : 32, 14, compact ? 22 : 32, 0);
+        this.FindControl<Grid>("FrameGrid")!.RowDefinitions[0].Height = new GridLength(compact ? 82 : 104);
+        this.FindControl<Grid>("ArchiveHeader")!.Margin = new Avalonia.Thickness(6, compact ? 0 : 6, 0, compact ? 8 : 16);
+        this.FindControl<Border>("ExtractionDock")!.Padding = compact ? new Avalonia.Thickness(12) : new Avalonia.Thickness(24, 36);
+        this.FindControl<Border>("SelectionInspector")!.IsVisible = ClientSize.Width >= 1150;
+        this.FindControl<TextBox>("SearchBox")!.Width = compact ? 140 : 240;
+        this.FindControl<TextBox>("SearchBox")!.Watermark = compact ? "Find files..." : "Search this folder...";
+        this.FindControl<TextBlock>("DestinationLabel")!.IsVisible = !compact;
+        this.FindControl<TextBlock>("ExtractActionLabel")!.Text = compact ? "Extract" : "Extract files";
+        var extract = this.FindControl<Button>("ExtractButton")!;
+        extract.MinWidth = compact ? 110 : 210;
+        extract.MinHeight = compact ? 42 : 56;
+        extract.FontSize = compact ? 14 : 20;
+        this.FindControl<TextBlock>("ArchiveNameText")!.FontSize = compact ? 23 : 32;
+        var table = this.FindControl<DataGrid>("ArchiveGrid")!;
+        table.RowHeight = compact ? 38 : 56;
+        table.Classes.Set("compact", compact);
+        table.Classes.Set("large", ClientSize.Width >= 1300);
+        table.FontSize = compact ? 14 : ClientSize.Width >= 1300 ? 18 : 16;
+        var columns = table.Columns;
+        columns[3].IsVisible = columns[5].IsVisible = _showMetadataColumns;
+    }
+    private void OnToggleMetadataColumns(object? sender, RoutedEventArgs e)
+    {
+        _showMetadataColumns = !_showMetadataColumns;
+        this.FindControl<MenuItem>("MetadataColumnsMenu")!.Header = _showMetadataColumns ? "Hide Type and CRC32 columns" : "Show Type and CRC32 columns";
+        UpdateResponsiveLayout();
+    }
+    private void OnToolsClicked(object? sender, RoutedEventArgs e) => this.FindControl<MenuItem>("ToolsMenu")!.IsSubMenuOpen = true;
+    private async void OnBrowseDestinationClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || !Vm.CanUseArchive) return;
+        try
+        {
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choose extraction folder", AllowMultiple = false });
+            if (folders.FirstOrDefault()?.TryGetLocalPath() is { } path) Vm.ExtractionDestination = path;
+        }
+        catch (Exception ex) { Vm.StatusMessage = "Could not choose extraction folder: " + ex.Message; }
+    }
 
     private async void OnRepairArchiveClicked(object? sender, RoutedEventArgs e)
     {
@@ -109,10 +156,12 @@ public partial class MainWindow : Window
         if (Vm == null || !Vm.CanUseArchive) return;
         try
         {
-            string destination = Path.Combine(Path.GetDirectoryName(Vm.CurrentArchivePath)!, ExplorerRequest.GetFolderName(Vm.CurrentArchivePath));
+            string destination = string.IsNullOrWhiteSpace(Vm.ExtractionDestination)
+                ? Path.Combine(Path.GetDirectoryName(Vm.CurrentArchivePath)!, ExplorerRequest.GetFolderName(Vm.CurrentArchivePath)) : Vm.ExtractionDestination;
             var choice = await ShowExtractionOptionsAsync(destination, Vm.CurrentArchivePath);
             if (choice == null) return;
             if (choice.Password.Length > 0 && !await Vm.OpenArchiveFileAsync(Vm.CurrentArchivePath, choice.Password)) return;
+            Vm.ExtractionDestination = choice.Destination;
             await RunExtractionAsync(choice);
         }
         catch (Exception ex) { Vm.StatusMessage = "Could not prepare extraction: " + ex.Message; }
@@ -234,7 +283,7 @@ public partial class MainWindow : Window
 
     private async void OnAboutClicked(object? sender, RoutedEventArgs e) =>
         await ShowInformationAsync("About LunaArc", "LunaArc Archiver",
-            $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}\nArchive manager for Windows and Linux.\n\nCreate .larc, ZIP and TAR GZip archives.\nBrowse, extract and test existing archives.\n\nToolbar icons: Microsoft Fluent UI System Icons (MIT).\nCopyright 2026 LunaSi Software.", showLogo: true);
+            $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}\nArchive manager for Windows and Linux.\n\nCreate LARC, ZIP, TAR GZip and 7z archives.\nBrowse, extract and test existing archives.\n\nToolbar icons: Microsoft Fluent UI System Icons (MIT).\nCopyright 2026 LunaSi Software.", showLogo: true);
 
     private Task ShowInformationAsync(string title, string heading, string body, bool showLogo = false)
     {
@@ -242,7 +291,7 @@ public partial class MainWindow : Window
         {
             Title = title, Width = 470, Height = showLogo ? 420 : 310, CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = Avalonia.Media.Brushes.White,
+            Background = Avalonia.Media.Brush.Parse("#102035"),
             FontFamily = FontFamily, FontSize = 12
         };
         var close = new Button { Name = "CloseInformationButton", Content = "Close", Width = 85,

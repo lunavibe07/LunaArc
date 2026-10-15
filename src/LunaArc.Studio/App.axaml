@@ -1,7 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="LunaArc.Studio.App"
-             RequestedThemeVariant="Light">
+             RequestedThemeVariant="Dark">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -13,6 +13,9 @@
         <FluentTheme />
         <Style Selector=":is(Window)">
             <Setter Property="Icon" Value="avares://LunaArc/Assets/app_logo.ico" />
+            <Setter Property="Background" Value="#102035" />
+            <Setter Property="Foreground" Value="#EAF2FF" />
+            <Setter Property="FontFamily" Value="avares://Avalonia.Fonts.Inter/Assets#Inter" />
         </Style>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
     </Application.Styles>

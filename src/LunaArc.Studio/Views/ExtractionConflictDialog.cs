@@ -8,7 +8,7 @@ internal static class ExtractionConflictDialog
     public static async Task<OverwriteMode> ShowAsync(Window owner, string path)
     {
         var dialog = new Window { Title = "File already exists", Width = 460, SizeToContent = SizeToContent.Height,
-            CanResize = false, FontSize = 12, Background = Avalonia.Media.Brush.Parse("#252525"),
+            CanResize = false, FontSize = 12, Background = Avalonia.Media.Brush.Parse("#102035"),
             WindowStartupLocation = WindowStartupLocation.CenterOwner, RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark };
         var buttons = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
         foreach (var (label, mode) in new[] { ("Overwrite", OverwriteMode.OverwriteAll), ("Skip", OverwriteMode.SkipExisting), ("Rename", OverwriteMode.AutoRename) })

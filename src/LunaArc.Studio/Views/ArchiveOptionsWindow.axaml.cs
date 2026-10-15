@@ -93,6 +93,6 @@ public partial class ArchiveOptionsWindow : Window
     {
         Title = title, Width = 450, SizeToContent = SizeToContent.Height, CanResize = false,
         WindowStartupLocation = WindowStartupLocation.CenterOwner, RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark,
-        Background = Avalonia.Media.Brush.Parse("#252525"), FontSize = 12
+        Background = Avalonia.Media.Brush.Parse("#102035"), FontSize = 12
     };
 }

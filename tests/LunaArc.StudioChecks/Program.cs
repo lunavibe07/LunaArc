@@ -28,7 +28,7 @@ internal static class Program
         {
             window.Show();
             Dispatcher.UIThread.RunJobs();
-            Check(window.ActualThemeVariant == ThemeVariant.Light, "Light desktop theme");
+            Check(window.ActualThemeVariant == ThemeVariant.Dark, "Nocturne dark desktop theme");
             Check(window.Icon != null, "Application logo loads from embedded resources");
             window.FindControl<MenuItem>("AboutMenu")!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Dispatcher.UIThread.RunJobs();
@@ -483,6 +483,7 @@ internal static class Program
             StandaloneExtractionChecks.Run(temporary, archivePath, larcOutput, "synthetic-created-password", Check, Capture);
             StandaloneCompressionChecks.Run(temporary, Check, Capture);
             EncryptedCreationChecks.Run(temporary, Check, Capture);
+            NocturneChecks.Run(temporary, Check, Capture);
             window.Show();
             var compactVm = new MainWindowViewModel();
             var compact = new MainWindow { DataContext = compactVm, Width = 720, Height = 440 };

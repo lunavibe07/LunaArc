@@ -1,38 +1,40 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:LunaArc.Studio.ViewModels"
-        x:Class="LunaArc.Studio.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Title="{Binding WindowTitle}" Width="1020" Height="650" MinWidth="720" MinHeight="440"
-        Background="#F0F0F0" Foreground="#202020" FontFamily="Segoe UI,Inter" FontSize="12"
-        WindowStartupLocation="CenterScreen">
-    <Window.Styles>
-        <Style Selector="Button.toolbar">
-            <Setter Property="Width" Value="76" />
-            <Setter Property="Height" Value="70" />
-            <Setter Property="Padding" Value="4,6" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="CornerRadius" Value="2" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-        </Style>
-        <Style Selector="Button.toolbar:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#E4EEF9" />
-            <Setter Property="BorderBrush" Value="#A8BED9" />
-        </Style>
-        <Style Selector="DataGridColumnHeader">
-            <Setter Property="Background" Value="#F6F6F6" />
-            <Setter Property="FontWeight" Value="Normal" />
-            <Setter Property="MinHeight" Value="28" />
-        </Style>
-        <Style Selector="DataGridCell">
-            <Setter Property="Padding" Value="6,2" />
-        </Style>
-    </Window.Styles>
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
-        <Border Grid.Row="0" BorderBrush="#C6C6C6" BorderThickness="0,0,0,1">
-            <Menu Background="#F5F5F5" IsEnabled="{Binding CanStartOperation}">
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:vm="using:LunaArc.Studio.ViewModels" x:Class="LunaArc.Studio.Views.MainWindow" x:DataType="vm:MainWindowViewModel"
+ Title="{Binding WindowTitle}" Width="1280" Height="820" MinWidth="720" MinHeight="500"
+ Background="#0B1422" Foreground="#EAF2FF" FontFamily="avares://Avalonia.Fonts.Inter/Assets#Inter" FontSize="14" RequestedThemeVariant="Dark" WindowStartupLocation="CenterScreen">
+ <Window.Resources>
+  <SolidColorBrush x:Key="DataGridRowSelectedBackgroundBrush" Color="#244154"/>
+  <SolidColorBrush x:Key="DataGridRowSelectedHoveredBackgroundBrush" Color="#2B5064"/>
+  <SolidColorBrush x:Key="DataGridRowSelectedUnfocusedBackgroundBrush" Color="#20384D"/>
+ </Window.Resources>
+ <Window.Styles>
+  <Style Selector="Button"><Setter Property="CornerRadius" Value="8"/><Setter Property="Background" Value="#13253A"/><Setter Property="BorderBrush" Value="#314B67"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="#DCEAFF"/><Setter Property="Padding" Value="12,8"/></Style>
+  <Style Selector="Button:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#223D55"/><Setter Property="BorderBrush" Value="#69DDE5"/></Style>
+  <Style Selector="Button:focus-visible /template/ ContentPresenter"><Setter Property="BorderBrush" Value="#69DDE5"/></Style>
+  <Style Selector="Button.rail"><Setter Property="Width" Value="82"/><Setter Property="Height" Value="78"/><Setter Property="FontSize" Value="15"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Center"/></Style>
+  <Style Selector="Button.primary"><Setter Property="Background" Value="#69DDE5"/><Setter Property="Foreground" Value="#071A28"/><Setter Property="BorderBrush" Value="#9DEBF2"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+  <Style Selector="Button.active"><Setter Property="Background" Value="#162D42"/><Setter Property="BorderBrush" Value="#69DDE5"/><Setter Property="BorderThickness" Value="3,0,0,0"/></Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#9DEBF2"/><Setter Property="Foreground" Value="#071A28"/></Style>
+  <Style Selector="TextBox"><Setter Property="Background" Value="#0D1D30"/><Setter Property="BorderBrush" Value="#314B67"/><Setter Property="Foreground" Value="#EAF2FF"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="12,9"/></Style>
+  <Style Selector="DataGridColumnHeader"><Setter Property="Background" Value="#102035"/><Setter Property="Foreground" Value="#ACBDD4"/><Setter Property="FontWeight" Value="Normal"/><Setter Property="FontSize" Value="14"/><Setter Property="MinHeight" Value="46"/></Style>
+  <Style Selector="DataGridCell"><Setter Property="Padding" Value="12,6"/></Style>
+  <Style Selector="DataGridCell TextBlock"><Setter Property="FontSize" Value="16"/></Style>
+  <Style Selector="DataGrid.large DataGridCell TextBlock"><Setter Property="FontSize" Value="18"/></Style>
+  <Style Selector="DataGrid.compact DataGridCell TextBlock"><Setter Property="FontSize" Value="14"/></Style>
+  <Style Selector="DataGridColumnHeader TextBlock"><Setter Property="FontSize" Value="16"/></Style>
+  <Style Selector="Border#SelectionInspector TextBlock"><Setter Property="FontSize" Value="16"/></Style>
+  <Style Selector="DataGridRow"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#EAF2FF"/></Style>
+ </Window.Styles>
+ <Grid>
+  <Image Source="avares://LunaArc/Assets/NocturneBackground.png" Stretch="UniformToFill" IsHitTestVisible="False"/>
+  <Grid Name="FrameGrid" RowDefinitions="104,*">
+   <Grid ColumnDefinitions="Auto,*" Margin="24,12,18,0">
+    <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+     <Image Source="avares://LunaArc/Assets/app_logo.png" Width="68" Height="68"/>
+     <StackPanel VerticalAlignment="Center" Spacing="4"><TextBlock Text="LunaArc" FontSize="26" FontWeight="SemiBold"/><TextBlock Text="ARCHIVE MANAGER" FontSize="10" LetterSpacing="2" Foreground="#A3BAD4"/></StackPanel>
+    </StackPanel>
+    <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,0,0">
+                 <Menu Background="Transparent" FontSize="12" IsEnabled="{Binding CanStartOperation}">
                 <MenuItem Header="_File">
                     <MenuItem Header="_Open archive..." InputGesture="Ctrl+O" Click="OnOpenArchiveClicked" />
                     <MenuItem Header="_Add files to archive..." Click="OnCompressFilesClicked" />
@@ -46,8 +48,10 @@
                     <MenuItem Header="_View selected file" Command="{Binding OpenOrEnterSelectedItemCommand}" IsEnabled="{Binding CanViewSelection}" />
                     <MenuItem Header="_Find files" Click="OnFindClicked" IsEnabled="{Binding HasArchive}" />
                     <MenuItem Header="Archive _information" Click="OnInfoClicked" IsEnabled="{Binding HasArchive}" />
+                    <Separator/>
+                    <MenuItem Name="MetadataColumnsMenu" Header="Show Type and CRC32 columns" Click="OnToggleMetadataColumns"/>
                 </MenuItem>
-                <MenuItem Header="_Tools">
+                <MenuItem Name="ToolsMenu" Header="_Tools">
                     <MenuItem Name="RepairArchiveMenu" Header="Repair archive using .lrec..." Click="OnRepairArchiveClicked" IsEnabled="{Binding CanStartOperation}"/>
                     <MenuItem Name="LockArchiveMenu" Header="Lock current archive" Click="OnLockArchiveClicked" IsEnabled="{Binding CanUseArchive}"/>
                     <MenuItem Name="UnlockArchiveMenu" Header="Unlock current archive" Click="OnUnlockArchiveClicked" IsEnabled="{Binding CanUseArchive}"/>
@@ -64,96 +68,92 @@
                     <MenuItem Name="AboutMenu" Header="_About LunaArc" Click="OnAboutClicked" />
                 </MenuItem>
             </Menu>
-        </Border>
-
-        <Border Grid.Row="1" Background="#F4F4F4" BorderBrush="#BFC4CA" BorderThickness="0,0,0,1">
-            <StackPanel Orientation="Horizontal" Margin="6,0" Spacing="2">
-                <Button Name="OpenButton" Classes="toolbar" Click="OnOpenArchiveClicked" IsEnabled="{Binding CanStartOperation}" ToolTip.Tip="Open an archive (Ctrl+O)">
-                    <StackPanel Spacing="4"><Viewbox Width="32" Height="32"><Path Width="24" Height="24" Data="{StaticResource OpenIcon}" Fill="#D49A14" /></Viewbox><TextBlock Text="Open" HorizontalAlignment="Center" /></StackPanel>
-                </Button>
-                <Button Name="AddButton" Classes="toolbar" Click="OnCompressFilesClicked" IsEnabled="{Binding CanStartOperation}" ToolTip.Tip="Create an archive from selected files">
-                    <StackPanel Spacing="4"><Viewbox Width="32" Height="32"><Path Width="24" Height="24" Data="{StaticResource AddIcon}" Fill="#8650A4" /></Viewbox><TextBlock Text="Add" HorizontalAlignment="Center" /></StackPanel>
-                </Button>
-                <Button Name="ExtractButton" Classes="toolbar" Click="OnExtractToClicked" IsEnabled="{Binding CanUseArchive}">
-                    <StackPanel Spacing="4"><Viewbox Width="32" Height="32"><Path Width="24" Height="24" Data="{StaticResource ExtractIcon}" Fill="#287BBD" /></Viewbox><TextBlock Text="Extract To" HorizontalAlignment="Center" /></StackPanel>
-                </Button>
-                <Button Name="TestButton" Classes="toolbar" Command="{Binding TestCurrentArchiveCommand}" IsEnabled="{Binding CanUseArchive}">
-                    <StackPanel Spacing="4"><Viewbox Width="32" Height="32"><Path Width="24" Height="24" Data="{StaticResource TestIcon}" Fill="#35934C" /></Viewbox><TextBlock Text="Test" HorizontalAlignment="Center" /></StackPanel>
-                </Button>
-                <Button Name="ViewButton" Classes="toolbar" Command="{Binding OpenOrEnterSelectedItemCommand}" IsEnabled="{Binding CanViewSelection}">
-                    <StackPanel Spacing="4"><Viewbox Width="32" Height="32"><Path Width="24" Height="24" Data="{StaticResource ViewIcon}" Fill="#397E94" /></Viewbox><TextBlock Text="View" HorizontalAlignment="Center" /></StackPanel>
-                </Button>
-                <Border Width="1" Background="#D0D0D0" Margin="7,12" />
-                <Button Name="FindButton" Classes="toolbar" Click="OnFindClicked" IsEnabled="{Binding CanUseArchive}">
-                    <StackPanel Spacing="4"><Viewbox Width="32" Height="32"><Path Width="24" Height="24" Data="{StaticResource FindIcon}" Fill="#6578BB" /></Viewbox><TextBlock Text="Find" HorizontalAlignment="Center" /></StackPanel>
-                </Button>
-                <Button Name="InfoButton" Classes="toolbar" Click="OnInfoClicked" IsEnabled="{Binding CanUseArchive}">
-                    <StackPanel Spacing="4"><Viewbox Width="32" Height="32"><Path Width="24" Height="24" Data="{StaticResource InfoIcon}" Fill="#3D77BA" /></Viewbox><TextBlock Text="Info" HorizontalAlignment="Center" /></StackPanel>
-                </Button>
-                <Button Name="OptionsButton" Classes="toolbar" Click="OnOptionsClicked" IsEnabled="{Binding CanStartOperation}">
-                    <StackPanel Spacing="4"><Viewbox Width="32" Height="32"><Path Width="24" Height="24" Data="{StaticResource SettingsIcon}" Fill="#747D84" /></Viewbox><TextBlock Text="Options" HorizontalAlignment="Center" /></StackPanel>
-                </Button>
-            </StackPanel>
-        </Border>
-
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*" Margin="5,5,5,4">
-            <Button Name="UpButton" Grid.Column="0" Width="30" Height="28" Padding="4" Margin="0,0,5,0" Command="{Binding GoUpFolderCommand}" IsEnabled="{Binding CanGoUp}" ToolTip.Tip="Go to parent folder">
-                <Path Width="18" Height="18" Stretch="Uniform" Data="{StaticResource UpIcon}" Fill="#454545" />
-            </Button>
-            <TextBox Grid.Column="1" Text="{Binding BreadcrumbPath}" IsReadOnly="True" Height="28" MinHeight="28" Padding="6,3" Background="White" BorderBrush="#B6BCC4" CornerRadius="0" />
-        </Grid>
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="7,0,7,5" IsVisible="{Binding IsSearchVisible}">
-            <TextBlock Text="Find:" VerticalAlignment="Center" Margin="0,0,8,0" />
-            <TextBox Name="SearchBox" Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Filter names in the current folder" MinHeight="28" Padding="6,3" />
-            <Button Grid.Column="2" Content="Close" Margin="6,0,0,0" Click="OnCloseFindClicked" />
-        </Grid>
-
-        <Border Grid.Row="4" Background="White" BorderBrush="#B6BCC4" BorderThickness="1" Margin="5,0,5,0">
-            <Grid>
-                <DataGrid Name="ArchiveGrid" ItemsSource="{Binding VisibleItems}" SelectedItem="{Binding SelectedItem}"
-                          IsEnabled="{Binding CanStartOperation}" AutoGenerateColumns="False" IsReadOnly="True"
-                          CanUserResizeColumns="True" CanUserSortColumns="True" CanUserReorderColumns="True"
-                          GridLinesVisibility="None" HeadersVisibility="Column" RowHeight="26"
-                          SelectionMode="Single" Background="White" BorderThickness="0"
-                          DoubleTapped="OnItemDoubleTapped">
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Name" Width="3*" MinWidth="200" SortMemberPath="Name">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate x:DataType="vm:VfsRowItem">
-                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <Grid Width="18" Height="18">
-                                            <Path Data="{StaticResource FolderIcon}" Fill="#D7A22C" Stretch="Uniform" IsVisible="{Binding IsDirectory}" />
-                                            <Path Data="{StaticResource FileIcon}" Fill="#6B879E" Stretch="Uniform" IsVisible="{Binding IsFile}" />
-                                        </Grid>
-                                        <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding FullRelativePath}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Size" Width="100" Binding="{Binding OriginalSizeDisplay}" SortMemberPath="OriginalSizeBytes" />
-                        <DataGridTextColumn Header="Packed" Width="100" Binding="{Binding CompressedSizeDisplay}" SortMemberPath="CompressedSizeBytes" />
-                        <DataGridTextColumn Header="Type" Width="130" Binding="{Binding TypeDisplay}" />
-                        <DataGridTextColumn Header="Modified" Width="150" Binding="{Binding ModifiedDisplay}" />
-                        <DataGridTextColumn Header="CRC32" Width="95" Binding="{Binding CrcDisplay}" />
-                    </DataGrid.Columns>
-                </DataGrid>
-                <StackPanel IsVisible="{Binding !HasArchive}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="7" IsHitTestVisible="False">
-                    <TextBlock Text="Open an archive to browse its contents" FontSize="14" Foreground="#626A72" HorizontalAlignment="Center" />
-                    <TextBlock Text="Use Open to browse an archive, or Add to create a new one." Foreground="#899198" HorizontalAlignment="Center" />
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <Grid Grid.Row="5" ColumnDefinitions="*,Auto,Auto" Margin="6,5" IsVisible="{Binding IsBusy}">
-            <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100" Height="18" ShowProgressText="True" />
-            <Button Grid.Column="1" Content="{Binding PauseButtonText}" Command="{Binding TogglePauseJobCommand}" Margin="6,0" Padding="8,2" />
-            <Button Grid.Column="2" Content="Cancel" Command="{Binding CancelActiveJobCommand}" Padding="8,2" />
-        </Grid>
-        <Border Grid.Row="6" BorderBrush="#C3C3C3" BorderThickness="0,1,0,0" Background="#F3F3F3" Padding="8,5">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Name="StatusText" Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,12,0" />
-                <TextBlock Grid.Column="1" Text="{Binding VisibleSummary}" VerticalAlignment="Center" Foreground="#555B62" />
-            </Grid>
-        </Border>
+    </StackPanel>
+   </Grid>
+   <Grid Name="WorkspaceGrid" Grid.Row="1" ColumnDefinitions="140,*">
+    <Border BorderBrush="#1F3650" BorderThickness="0,1,1,0" CornerRadius="14,14,0,0" Background="#800D1B2D" Padding="8,16,8,8">
+     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="8">
+       <Button Name="OpenButton" Classes="rail active" Click="OnOpenArchiveClicked" IsEnabled="{Binding CanStartOperation}" ToolTip.Tip="Open an archive (Ctrl+O)"><StackPanel Spacing="8"><Path Width="28" Height="28" Stretch="Uniform" Data="{StaticResource OpenIcon}" Fill="#69DDE5"/><TextBlock Text="Open" HorizontalAlignment="Center"/></StackPanel></Button>
+       <Button Name="AddButton" Classes="rail" Click="OnCompressFilesClicked" IsEnabled="{Binding CanStartOperation}" ToolTip.Tip="Create an archive"><StackPanel Spacing="8"><Path Width="28" Height="28" Stretch="Uniform" Data="{StaticResource AddIcon}" Fill="#AEC5DF"/><TextBlock Text="Create" HorizontalAlignment="Center"/></StackPanel></Button>
+       <Border Background="#2B415C" Height="1" Margin="12,8"/>
+       <Button Name="ToolsButton" Classes="rail" Click="OnToolsClicked" IsEnabled="{Binding CanStartOperation}" ToolTip.Tip="Archive tools"><StackPanel Spacing="8"><Path Width="28" Height="28" Stretch="Uniform" Data="{StaticResource SettingsIcon}" Fill="#AEC5DF"/><TextBlock Text="Tools" HorizontalAlignment="Center"/></StackPanel></Button>
+       <Button Name="HelpButton" Classes="rail" Click="OnHelpTopicsClicked" ToolTip.Tip="Help topics (F1)"><StackPanel Spacing="8"><Path Width="28" Height="28" Stretch="Uniform" Data="{StaticResource InfoIcon}" Fill="#AEC5DF"/><TextBlock Text="Help" HorizontalAlignment="Center"/></StackPanel></Button>
+       <Button Name="OptionsButton" Classes="rail" Click="OnOptionsClicked" IsEnabled="{Binding CanStartOperation}" ToolTip.Tip="Compression and password defaults"><StackPanel Spacing="8"><Path Width="24" Height="24" Stretch="Uniform" Data="{StaticResource SettingsIcon}" Fill="#A3BAD4"/><TextBlock Text="Options" HorizontalAlignment="Center" FontSize="12"/></StackPanel></Button>
+      </StackPanel>
+     </ScrollViewer>
+    </Border>
+    <Grid Name="ArchiveWorkspace" Grid.Column="1" RowDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="32,14,32,0">
+     <Grid Name="ArchiveHeader" ColumnDefinitions="*,Auto" Margin="6,6,0,16">
+      <Grid ColumnDefinitions="Auto,*">
+       <Path Width="42" Height="48" Stretch="Uniform" Data="{StaticResource FileIcon}" Fill="#A3BAD4" Margin="0,0,18,0"/>
+       <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="6">
+        <TextBlock Name="ArchiveNameText" Text="{Binding ArchiveDisplayName}" FontSize="26" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CurrentArchivePath}"/>
+        <TextBlock Text="{Binding ArchiveSubtitle}" FontSize="12" Foreground="#A3BAD4"/>
+       </StackPanel>
+      </Grid>
+      <Grid Grid.Column="1" ColumnDefinitions="*,Auto" VerticalAlignment="Center" Margin="20,0,0,0">
+       <TextBox Name="SearchBox" Text="{Binding SearchQuery}" Watermark="Search this folder..." Width="240" IsEnabled="{Binding HasArchive}"/>
+       <Button Name="FindButton" Grid.Column="1" Click="OnFindClicked" IsEnabled="{Binding HasArchive}" ToolTip.Tip="Find files (F3)" Margin="8,0,0,0"><Path Width="18" Height="18" Stretch="Uniform" Data="{StaticResource FindIcon}" Fill="#AEC5DF"/></Button>
+      </Grid>
+     </Grid>
+     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,14">
+      <Button Name="UpButton" Command="{Binding GoUpFolderCommand}" IsEnabled="{Binding CanGoUp}" ToolTip.Tip="Go to parent folder" Padding="9" Margin="0,0,8,0"><Path Width="16" Height="16" Stretch="Uniform" Data="{StaticResource UpIcon}" Fill="#AEC5DF"/></Button>
+      <TextBox Grid.Column="1" Text="{Binding BreadcrumbPath}" IsReadOnly="True" FontSize="12" Padding="10,7"/>
+      <Button Grid.Column="2" Content="Clear filter" IsVisible="{Binding IsSearchVisible}" Click="OnCloseFindClicked" Margin="8,0,0,0" FontSize="12"/>
+     </Grid>
+     <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+      <Border Background="#DA0B1727" BorderBrush="#29425F" BorderThickness="1" CornerRadius="8">
+       <Grid>
+        <DataGrid Name="ArchiveGrid" ItemsSource="{Binding VisibleItems}" SelectedItem="{Binding SelectedItem}"
+         IsEnabled="{Binding CanStartOperation}" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeColumns="True" CanUserSortColumns="True" CanUserReorderColumns="True"
+         GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#20344D" HeadersVisibility="Column" RowHeight="56" FontSize="16" SelectionMode="Single" Background="Transparent" BorderThickness="0" DoubleTapped="OnItemDoubleTapped">
+         <DataGrid.Columns>
+          <DataGridTemplateColumn Header="Name" Width="2*" MinWidth="190" SortMemberPath="Name"><DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:VfsRowItem">
+           <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center"><Grid Width="24" Height="24"><Path Data="{StaticResource FolderIcon}" Fill="#DCC18A" Stretch="Uniform" IsVisible="{Binding IsDirectory}"/><Path Data="{StaticResource FileIcon}" Fill="#A3BAD4" Stretch="Uniform" IsVisible="{Binding IsFile}"/></Grid><TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding FullRelativePath}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></StackPanel>
+          </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+          <DataGridTextColumn Header="Size" Width="*" MinWidth="90" Binding="{Binding OriginalSizeDisplay}" SortMemberPath="OriginalSizeBytes"/>
+          <DataGridTextColumn Header="Packed" Width="*" MinWidth="90" Binding="{Binding CompressedSizeDisplay}" SortMemberPath="CompressedSizeBytes"/>
+          <DataGridTextColumn Header="Type" Width="110" Binding="{Binding TypeDisplay}"/>
+          <DataGridTextColumn Header="Modified" Width="1.5*" MinWidth="145" Binding="{Binding ModifiedDisplay}"/>
+          <DataGridTextColumn Header="CRC32" Width="95" Binding="{Binding CrcDisplay}"/>
+         </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel IsVisible="{Binding !HasArchive}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Margin="24" IsHitTestVisible="False">
+         <TextBlock Text="A little space for your files." FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Center"/>
+         <TextBlock Text="Open an archive to browse, or choose Create to get started." Foreground="#A3BAD4" TextWrapping="Wrap" TextAlignment="Center"/>
+        </StackPanel>
+       </Grid>
+      </Border>
+      <Border Name="SelectionInspector" Grid.Column="1" Width="280" Margin="16,0,0,0" Background="#B5102033" BorderBrush="#29425F" BorderThickness="1" CornerRadius="14" Padding="22">
+       <ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel Spacing="10">
+        <Grid Width="76" Height="76" HorizontalAlignment="Left" Margin="0,12,0,12"><Path Data="{StaticResource FolderIcon}" Fill="#DCC18A" Stretch="Uniform" IsVisible="{Binding SelectionIsFolder}"/><Path Data="{StaticResource FileIcon}" Fill="#A3BAD4" Stretch="Uniform" IsVisible="{Binding !SelectionIsFolder}"/></Grid>
+        <TextBlock Text="{Binding SelectionName}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding SelectionType}" Foreground="#A3BAD4" TextWrapping="Wrap"/>
+        <Border Background="#2B415C" Height="1" Margin="0,14"/>
+        <TextBlock Text="Size" Foreground="#A3BAD4"/><TextBlock Name="InspectorSize" Text="{Binding SelectionSize}"/>
+        <TextBlock Text="Packed size" Foreground="#A3BAD4" Margin="0,8,0,0"/><TextBlock Text="{Binding SelectionPacked}"/>
+        <TextBlock Text="Modified" Foreground="#A3BAD4" Margin="0,8,0,0"/><TextBlock Text="{Binding SelectionModified}" TextWrapping="Wrap"/>
+        <Button Name="ViewButton" Content="View selected" Command="{Binding OpenOrEnterSelectedItemCommand}" IsEnabled="{Binding CanViewSelection}" Margin="0,16,0,0"/>
+        <Button Name="InfoButton" Content="Archive info" Click="OnInfoClicked" IsEnabled="{Binding HasArchive}"/>
+       </StackPanel></ScrollViewer>
+      </Border>
+     </Grid>
+     <Border Name="ExtractionDock" Grid.Row="3" Background="#E6102035" BorderBrush="#365977" BorderThickness="1" CornerRadius="22" Padding="18" Margin="-4,16,-4,12">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+       <TextBlock Name="DestinationLabel" Text="Extract to:" FontSize="16" Foreground="#BCD1EB" VerticalAlignment="Center" Margin="0,0,12,0"/>
+       <TextBox Name="QuickDestinationBox" Grid.Column="1" Text="{Binding ExtractionDestination}" FontSize="16" IsEnabled="{Binding CanUseArchive}" Watermark="Choose destination" ToolTip.Tip="{Binding ExtractionDestination}"/>
+       <Button Name="BrowseDestinationButton" Grid.Column="2" Click="OnBrowseDestinationClicked" IsEnabled="{Binding CanUseArchive}" ToolTip.Tip="Choose extraction folder" Margin="8,0,12,0"><Path Width="23" Height="23" Stretch="Uniform" Data="{StaticResource OpenIcon}" Fill="#BCD1EB"/></Button>
+       <Button Name="ExtractButton" Grid.Column="3" Classes="primary" Click="OnExtractToClicked" IsEnabled="{Binding CanUseArchive}" Padding="20,11" FontSize="16">
+        <StackPanel Orientation="Horizontal" Spacing="10"><Path Width="24" Height="24" Stretch="Uniform" Data="{StaticResource ExtractIcon}" Fill="#071A28"/><TextBlock Name="ExtractActionLabel" Text="Extract files" VerticalAlignment="Center"/></StackPanel>
+       </Button>
+       <Button Name="TestButton" Grid.Column="4" Command="{Binding TestCurrentArchiveCommand}" IsEnabled="{Binding CanUseArchive}" Margin="12,0,0,0" Padding="14,10"><StackPanel Orientation="Horizontal" Spacing="8"><Path Width="20" Height="20" Stretch="Uniform" Data="{StaticResource TestIcon}" Fill="#BCD1EB"/><TextBlock Text="Test" VerticalAlignment="Center"/></StackPanel></Button>
+      </Grid>
+     </Border>
+     <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,10" IsVisible="{Binding IsBusy}"><ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100" Height="12" ShowProgressText="True"/><Button Grid.Column="1" Content="{Binding PauseButtonText}" Command="{Binding TogglePauseJobCommand}" Margin="8,0"/><Button Grid.Column="2" Content="Cancel" Command="{Binding CancelActiveJobCommand}"/></Grid>
+     <Grid Grid.Row="5" ColumnDefinitions="*,Auto" Margin="0,0,0,10"><TextBlock Name="StatusText" Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="#A3BAD4" ToolTip.Tip="{Binding StatusMessage}" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="{Binding VisibleSummary}" Foreground="#A3BAD4" FontSize="11"/></Grid>
     </Grid>
+   </Grid>
+  </Grid>
+ </Grid>
 </Window>

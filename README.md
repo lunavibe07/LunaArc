@@ -31,16 +31,18 @@ Core uses SharpCompress 0.50.5, SharpZipLib 1.4.2 ([MIT license](branding/SharpZ
 
 ## Desktop interface
 
-Since version 1.1, LunaArc uses a light, classic desktop layout: menu bar, large toolbar icons, archive path, resizable/sortable file columns and a status bar. The layout is inspired by familiar archive managers while retaining LunaArc branding.
+Version **2.0.0** introduces **Nocturne Orbit**, the selected LunaArc design: a matte navy workspace with cyan extraction controls, warm gold folder accents and subtle orbital artwork. The original moon-and-sun logo remains unchanged. A left rail provides Open, Create, Tools, Help and Options; the main area combines an archive heading, folder search/path, file table and selection details. Compression, extraction, password, progress, About and offline Help windows share the dark palette.
+
+The bottom extraction dock lets you enter or browse for a destination before opening the existing extraction options dialog. The selected path is passed to that dialog; its overwrite, update and password controls still apply. At smaller widths the inspector hides, the heading/search compact, and the dock retains its Extract/Test controls. Default columns are Name, Size, Packed and Modified; **Commands > Show Type and CRC32 columns** restores the additional metadata. Sizes still sort numerically. A dash means the reader did not supply a usable per-entry size; the archive heading shows its actual on-disk size.
 
 Version **1.4.5** replaces the logo with the supplied moon-and-sun infinity artwork (`anhnen.png`). The same logo is used for application windows, Windows executable/Setup/Explorer icons and the Linux launcher. Open **Help > About LunaArc** to see it in the application. See [branding assets](branding/README.md) for the original image and derived icon files.
 
-- **Open** loads an archive; **Add** selects files and opens the [General compression dialog](#create-an-archive) with the output name, format, method, password and comment controls.
-- **Extract To**, **Test** and **View** use the existing archive backend. Archive-only commands stay disabled until an archive is open; View also requires a selection.
-- **Extract To** and Explorer's **Extract files...** share the [extraction path/options dialog](#extract-files), with destination browsing, a folder tree and password controls.
+- **Open** loads an archive; **Create** (or **File > Add files to archive...**) selects files and opens the [General compression dialog](#create-an-archive) with the output name, format, method, password and comment controls.
+- **Extract files**, **Test** and **View selected** use the existing archive backend. Archive-only commands stay disabled until an archive is open; View also requires a selection. View and Info are available in the inspector and Commands menu.
+- The extraction dock and Explorer's **Extract files...** share the [extraction path/options dialog](#extract-files), with destination browsing, a folder tree and password controls.
 - Double-click a folder to browse it; **Up** returns to its parent. Double-click a file to preview it.
 - **Find** / **F3** filters names in the current folder without changing archive contents. Size columns sort by numeric byte counts.
-- **Info** shows the current archive path, folder/file summary and available comment. **Options** opens compression/password settings; cancelling restores the previous settings.
+- **Archive info** shows the current archive path, folder/file summary and available comment. **Options** opens compression/password settings; cancelling restores the previous settings.
 - **File** includes close archive and exit; **Tools** contains context-menu installation. **Ctrl+O** opens an archive.
 - **Help > Help topics / F1** opens the offline user guide with Contents, an alphabetical Index, full-text Search, saved Favorites, related-topic links and Back/Forward navigation. **Help > Home page (GitHub)** opens [the LunaArc repository](https://github.com/lunavibe07/LunaArc) in your default browser. **Help > About LunaArc** displays the application version and logo.
 
