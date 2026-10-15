@@ -206,7 +206,7 @@ public partial class MainWindow : Window
 
     private async void OnAboutClicked(object? sender, RoutedEventArgs e) =>
         await ShowInformationAsync("About LunaArc", "LunaArc Archiver",
-            $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}\nArchive manager for Windows and Linux.\n\nCreate .larc, ZIP and TAR GZip archives.\nBrowse, extract and test existing archives.\n\nToolbar icons: Microsoft Fluent UI System Icons (MIT).\nCopyright 2026 LunaArc Software.", showLogo: true);
+            $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}\nArchive manager for Windows and Linux.\n\nCreate .larc, ZIP and TAR GZip archives.\nBrowse, extract and test existing archives.\n\nToolbar icons: Microsoft Fluent UI System Icons (MIT).\nCopyright 2026 LunaSi Software.", showLogo: true);
 
     private Task ShowInformationAsync(string title, string heading, string body, bool showLogo = false)
     {
