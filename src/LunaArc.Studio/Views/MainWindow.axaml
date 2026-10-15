@@ -58,6 +58,7 @@
                     <MenuItem Header="Compression options / _password..." Click="OnOptionsClicked" />
                 </MenuItem>
                 <MenuItem Name="HelpMenu" Header="_Help">
+                    <MenuItem Name="HelpTopicsMenu" Header="Help _topics" InputGesture="F1" Click="OnHelpTopicsClicked"/>
                     <MenuItem Name="HomePageMenu" Header="_Home page (GitHub)" Click="OnHomePageClicked" ToolTip.Tip="https://github.com/lunavibe07/LunaArc" />
                     <Separator />
                     <MenuItem Name="AboutMenu" Header="_About LunaArc" Click="OnAboutClicked" />

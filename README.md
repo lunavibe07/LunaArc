@@ -42,7 +42,9 @@ Version **1.4.5** replaces the logo with the supplied moon-and-sun infinity artw
 - **Find** / **F3** filters names in the current folder without changing archive contents. Size columns sort by numeric byte counts.
 - **Info** shows the current archive path, folder/file summary and available comment. **Options** opens compression/password settings; cancelling restores the previous settings.
 - **File** includes close archive and exit; **Tools** contains context-menu installation. **Ctrl+O** opens an archive.
-- **Help > Home page (GitHub)** opens [the LunaArc repository](https://github.com/lunavibe07/LunaArc) in your default browser. **Help > About LunaArc** displays the application version and logo.
+- **Help > Help topics / F1** opens the offline user guide with Contents, an alphabetical Index, full-text Search, saved Favorites, related-topic links and Back/Forward navigation. **Help > Home page (GitHub)** opens [the LunaArc repository](https://github.com/lunavibe07/LunaArc) in your default browser. **Help > About LunaArc** displays the application version and logo.
+
+The **Help Topics** window has a classic two-pane layout. Choose a topic in Contents/Index, enter a word in Search, or follow a related-topic link below an article. **Add favorite / Remove favorite** saves only topic IDs in the current user's `LunaArc/help-favorites.json` under the OS local application-data directory. **Hide navigation** expands the article; **Show navigation** restores the tabs. The guide is embedded in the application and needs no internet or Windows CHM viewer, so the same help works on Windows and Linux. It documents current capabilities and limits, including ZIP file-name visibility and the two extraction steps for encrypted TAR GZip.
 
 The interface lists archive contents; it is not a general system-drive file browser. Tools includes repair using a LunaArc .lrec companion and explicit lock/unlock. Archive entry editing is not implemented. Both installed and portable Windows editions have this same interface. Toolbar artwork comes from Microsoft Fluent UI System Icons; its MIT notice is included in every published folder.
 

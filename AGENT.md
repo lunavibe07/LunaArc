@@ -65,6 +65,7 @@ Current dependencies: SharpCompress 0.50.5, SharpZipLib 1.4.2 (encrypted ZIP wri
 - Preserve VFS parent/child relationships, full paths, metadata and root detection. Archive paths are case-sensitive, even on a case-insensitive host.
 - Keep Studio state/commands in ViewModels and layout/bindings in XAML. Run archive work off the UI thread and dispatch progress/watcher notifications to the UI thread.
 - Studio uses a light classic desktop layout with menu/toolbar/path/DataGrid/status bar. Keep unsupported archive editing actions out of the toolbar; recovery-record repair and lock/unlock are available under Tools. Compression/password/comment options live in a modal dialog; cancellation restores prior values. Preserve numeric size sorting and current-folder name filtering.
+- Help > Help topics / F1 uses the cross-platform offline HelpTopicsWindow, HelpTopicsViewModel and embedded HelpCatalog. Keep its English content aligned with actual supported behavior; never copy WinRAR help text or promise unsupported capabilities. Preserve Contents/Index/Search/Favorites, related links, navigation history and atomic user-scoped topic-ID favorites. Headless checks inject a disposable favorites path and must not modify personal favorites.
 - Prevent overlapping jobs; verify busy, error, cancel and selection/navigation behavior. Check generated commands and bindings when changing XAML.
 
 ## Archive and filesystem rules

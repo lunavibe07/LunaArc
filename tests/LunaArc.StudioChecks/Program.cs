@@ -43,6 +43,7 @@ internal static class Program
             window.FindControl<MenuItem>("HelpMenu")!.IsSubMenuOpen = true;
             Capture(window, "help-menu.png");
             window.FindControl<MenuItem>("HelpMenu")!.IsSubMenuOpen = false;
+            HelpTopicsChecks.Run(window, temporary, Check, Capture);
 
             string archivePath = Path.Combine(temporary, "Sample archive.zip");
             using (var zip = ZipFile.Open(archivePath, ZipArchiveMode.Create))

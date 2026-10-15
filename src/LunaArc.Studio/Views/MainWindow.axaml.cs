@@ -210,6 +210,15 @@ public partial class MainWindow : Window
             "\n\nComment:\n" + (string.IsNullOrWhiteSpace(Vm.ArchiveComment) ? "No comment." : Vm.ArchiveComment));
     }
 
+    private HelpTopicsWindow? _helpTopics;
+    private void OnHelpTopicsClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_helpTopics != null) { _helpTopics.Activate(); return; }
+        _helpTopics = new HelpTopicsWindow { DataContext = new HelpTopicsViewModel() };
+        _helpTopics.Closed += (_, _) => _helpTopics = null;
+        _helpTopics.Show(this);
+    }
+
     private async void OnHomePageClicked(object? sender, RoutedEventArgs e)
     {
         try
@@ -263,6 +272,7 @@ public partial class MainWindow : Window
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (e.Key == Key.F1) { OnHelpTopicsClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
         if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.O && Vm?.CanStartOperation == true)
         {
             OnOpenArchiveClicked(this, new RoutedEventArgs());
