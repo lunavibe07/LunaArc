@@ -282,7 +282,14 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         await Task.Run(() =>
         {
             using var outStream = new FileStream(options.OutputArchivePath, FileMode.Create, FileAccess.Write);
-            using var gzip = new GZipStream(outStream, CompressionLevel.Optimal);
+            CompressionLevel compression = options.Level switch
+            {
+                LunaCompressionLevel.Store => CompressionLevel.NoCompression,
+                LunaCompressionLevel.Fastest or LunaCompressionLevel.Fast => CompressionLevel.Fastest,
+                LunaCompressionLevel.Best => CompressionLevel.SmallestSize,
+                _ => CompressionLevel.Optimal
+            };
+            using var gzip = new GZipStream(outStream, compression);
             using var writer = new System.Formats.Tar.TarWriter(gzip, System.Formats.Tar.TarEntryFormat.Pax);
             var entries = new List<(string FullPath, string RelativePath)>();
             foreach (string source in sourcePaths)

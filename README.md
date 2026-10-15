@@ -35,7 +35,7 @@ Since version 1.1, LunaArc uses a light, classic desktop layout: menu bar, large
 
 The supplied Luna logo is used for application windows, Windows executable/Setup/Explorer icons and the Linux launcher. Open **Help > About LunaArc** to see it in the application. See [branding assets](branding/README.md) for the source and derived icon files.
 
-- **Open** loads an archive; **Add** selects files and opens the format, level, password and comment dialog before saving a new archive.
+- **Open** loads an archive; **Add** selects files and opens the [General compression dialog](#create-an-archive) with the output name, format, method, password and comment controls.
 - **Extract To**, **Test** and **View** use the existing archive backend. Archive-only commands stay disabled until an archive is open; View also requires a selection.
 - **Extract To** and Explorer's **Extract files...** share the [extraction path/options dialog](#extract-files), with destination browsing, a folder tree and password controls.
 - Double-click a folder to browse it; **Up** returns to its parent. Double-click a file to preview it.
@@ -44,6 +44,22 @@ The supplied Luna logo is used for application windows, Windows executable/Setup
 - **File** includes close archive and exit; **Tools** contains context-menu installation. **Ctrl+O** opens an archive.
 
 The interface lists archive contents; it is not a general system-drive file browser. Delete and Repair commands are not exposed because the backend does not implement archive editing/repair. Both installed and portable Windows editions have this same interface. Toolbar artwork comes from Microsoft Fluent UI System Icons; its MIT notice is included in every published folder.
+
+## Create an archive
+
+Version **1.3.4** introduces a dark **Archive name and parameters** dialog containing only **General**, shared by toolbar **Add** and Explorer's **Add to archive... / Add to ZIP archive...**.
+
+1. Select files using **Add**, or right-click a file/folder in Explorer and choose a LunaArc compression command.
+2. Enter a full **Archive name**, or use **Browse...**. The suggested name is unused; select another name if the destination already exists. Save outside selected source folders.
+3. Choose **LARC**, **ZIP** or **TAR GZip** and a **Compression method** from Store through Best. Selecting a format updates the file extension.
+4. Optionally select **Test archived files** to verify archive contents before the completed file is placed at the requested output path.
+5. Use **Set password...** for LARC encryption. Enter and confirm the password; **Show password** reveals the fields. Both fields can be left blank to remove the password. ZIP/TAR GZip password creation is not supported and is rejected.
+6. Expand **Archive comment** to enter an optional LARC/ZIP comment. TAR GZip comments are not supported.
+7. Select **OK** to create the archive and open it in LunaArc. **Cancel** discards draft changes; sources and existing archives are preserved. **Help** explains the controls.
+
+**Archive mode** currently creates new archives. Updating/synchronizing existing archives, RAR creation, SFX, solid-mode controls, custom dictionaries, recovery records and archive locking are not provided by this dialog. Compression methods use each format's available presets; ZIP and GZip map several presets to the same engine level.
+
+When opened from **Options**, General edits defaults for the next compression operation; the output field is disabled and OK does not modify an archive already open. New archive creation in Studio uses a temporary file in the destination directory, optionally verifies it, and moves it into place without replacing an existing file. Failure/cancellation cleans up that temporary file; it does not remove the source files.
 
 ## Extract files
 
@@ -151,7 +167,7 @@ Extract the portable package into a permanent folder, then double-click **Instal
 
 Version 1.3 groups commands under **LunaArc**, with **Open with LunaArc**, **Extract files...**, **Extract to folder**, and **Extract Here** in that order. The modern menu names the destination dynamically, such as **Extract to "Sample archive\\"**. Other files and directories offer **Add to archive...** and **Add to ZIP archive...**. Only one selected filesystem item is supported; multi-selection and folder backgrounds are not supported.
 
-**Extract files...** opens the extraction path/options dialog. The other extraction actions open LunaArc with progress and use either the archive's parent directory or an archive-named folder; protected archives also open the password/options dialog. Existing files are skipped by default. Select **Overwrite without prompt** only when replacement is intended, or use **Ask before overwrite** to decide per file. Compression commands open the existing creation-options and save dialogs.
+**Extract files...** opens the extraction path/options dialog. The other extraction actions open LunaArc with progress and use either the archive's parent directory or an archive-named folder; protected archives also open the password/options dialog. Existing files are skipped by default. Select **Overwrite without prompt** only when replacement is intended, or use **Ask before overwrite** to decide per file. Compression commands open the General creation dialog with the output path and an optional Browse picker.
 
 The optional **Windows 11 menu preview** uses a native C++ `IExplorerCommand` DLL and a sparse identity package, following [Microsoft's Explorer extension model](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer). Enable it using **InstallWindows11Menu.cmd**, or select the additional Windows 11 menu task in Setup. Portable registration shows the signer and certificate thumbprint and asks for **YES** before adding trust. The Setup task explicitly opts into the same certificate trust.
 

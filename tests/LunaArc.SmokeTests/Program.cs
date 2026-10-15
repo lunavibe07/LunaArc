@@ -27,7 +27,9 @@ try
         (OutputArchiveFormat.LarcNative, "larc", "synthetic-test-password", LunaCompressionLevel.Normal),
         (OutputArchiveFormat.LarcNative, "larc", (string?)null, LunaCompressionLevel.Store),
         (OutputArchiveFormat.Zip, "zip", (string?)null, LunaCompressionLevel.Normal),
-        (OutputArchiveFormat.TarGz, "tar.gz", (string?)null, LunaCompressionLevel.Normal)
+        (OutputArchiveFormat.TarGz, "tar.gz", (string?)null, LunaCompressionLevel.Normal),
+        (OutputArchiveFormat.TarGz, "tar.gz", (string?)null, LunaCompressionLevel.Store),
+        (OutputArchiveFormat.TarGz, "tar.gz", (string?)null, LunaCompressionLevel.Best)
     })
     {
         string archive = Path.Combine(root, $"archive-{checks}.{extension}");

@@ -88,12 +88,77 @@ internal static class Program
 
             Click(window.FindControl<Button>("OptionsButton")!);
             var options = (ArchiveOptionsWindow)window.OwnedWindows.Single();
-            Check(options.FindControl<ComboBox>("FormatPicker")!.SelectedIndex == vm.SelectedFormatIndex, "Options show active format");
+            Check(options.Options.SelectedFormatIndex == vm.SelectedFormatIndex && options.FindControl<TabControl>("CompressionTabs")!.Items.Count == 1, "Compression options show active format and only General");
             Capture(options, "options.png");
             int originalLevel = vm.SelectedLevelIndex;
-            vm.SelectedLevelIndex = 5;
+            options.Options.SelectedLevelIndex = 5;
+            options.Options.PasswordInput = "synthetic-cancelled-password";
             Click(options.FindControl<Button>("CancelOptionsButton")!);
-            Check(vm.SelectedLevelIndex == originalLevel, "Cancel restores compression settings");
+            Check(vm.SelectedLevelIndex == originalLevel && vm.PasswordInput.Length == 0 && options.Options.PasswordInput.Length == 0, "Cancel preserves compression settings and clears draft secrets");
+
+            string compressionSource = Path.Combine(temporary, "compression source.txt");
+            File.WriteAllText(compressionSource, "Synthetic compression dialog fixture");
+            Task createZip = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.AddZip, compressionSource));
+            Dispatcher.UIThread.RunJobs();
+            var zipOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
+            Check(zipOptions.Options.IsZip && zipOptions.FindControl<TextBox>("ArchiveNameBox")!.IsEnabled, "Explorer Add ZIP opens General with an editable output name");
+            zipOptions.Options.ArchiveName = archivePath;
+            Click(zipOptions.FindControl<Button>("AcceptOptionsButton")!);
+            Check(window.OwnedWindows.Contains(zipOptions) && zipOptions.Options.Status.Contains("already exists"), "General rejects an existing output archive without closing");
+            zipOptions.Options.ArchiveName = Path.Combine(temporary, "Created from General.zip");
+            zipOptions.FindControl<ComboBox>("LevelPicker")!.SelectedIndex = 5;
+            zipOptions.FindControl<CheckBox>("TestCreatedArchiveBox")!.IsChecked = true;
+            zipOptions.Options.ArchiveComment = "Synthetic General comment";
+            Capture(zipOptions, "compression-general.png");
+            zipOptions.Width = 560; zipOptions.Height = 540;
+            Capture(zipOptions, "compression-compact.png");
+            string zipOutput = zipOptions.Options.ArchiveName;
+            Click(zipOptions.FindControl<Button>("AcceptOptionsButton")!);
+            Pump(createZip);
+            Check(File.Exists(zipOutput) && vm.StatusMessage.Contains("verified"), "General creates and verifies the selected ZIP output");
+            using (var createdZip = ZipFile.OpenRead(zipOutput))
+            using (var reader = new StreamReader(createdZip.Entries.Single().Open()))
+                Check(reader.ReadToEnd() == "Synthetic compression dialog fixture" && createdZip.Comment == "Synthetic General comment", "Independent ZIP reader verifies content and comment from General");
+            byte[] originalZipHash = System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(zipOutput));
+            Pump(vm.CompressFilesToArchiveAsync(new[] { compressionSource }, zipOutput));
+            Check(originalZipHash.SequenceEqual(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(zipOutput))), "Compression preserves an existing archive at the final output path");
+            Check(Directory.GetFiles(temporary, ".lunaarc-*").Length == 0 && File.Exists(compressionSource), "Compression keeps sources and cleans temporary output");
+
+            Task createLarc = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Add, compressionSource));
+            Dispatcher.UIThread.RunJobs();
+            var larcOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
+            larcOptions.Options.ArchiveName = Path.Combine(temporary, "Created encrypted.larc");
+            Click(larcOptions.FindControl<Button>("SetArchivePasswordButton")!);
+            var passwordDialog = larcOptions.OwnedWindows.Single();
+            var passwordContent = (StackPanel)passwordDialog.Content!;
+            var passwordFields = passwordContent.Children.OfType<TextBox>().ToArray();
+            Check(passwordFields.All(field => field.PasswordChar != '\0'), "Set password masks both password fields");
+            passwordFields[0].Text = "synthetic-created-password";
+            passwordFields[1].Text = "different-confirmation";
+            var passwordAccept = passwordContent.Children.OfType<StackPanel>().Single().Children.OfType<Button>().First();
+            Click(passwordAccept);
+            Check(larcOptions.OwnedWindows.Any(), "Set password rejects mismatched confirmation");
+            passwordFields[1].Text = passwordFields[0].Text;
+            Capture(passwordDialog, "compression-password.png");
+            Click(passwordAccept);
+            Check(larcOptions.Options.PasswordInput == "synthetic-created-password" && passwordFields.All(field => field.Text == string.Empty), "Accepted password belongs to the compression draft and child inputs are cleared");
+            larcOptions.FindControl<RadioButton>("ZipFormatRadio")!.IsChecked = true;
+            Click(larcOptions.FindControl<Button>("AcceptOptionsButton")!);
+            Check(larcOptions.Options.Status.Contains("LARC") && window.OwnedWindows.Contains(larcOptions), "General rejects unsupported password-protected ZIP creation");
+            larcOptions.FindControl<RadioButton>("LarcFormatRadio")!.IsChecked = true;
+            larcOptions.FindControl<CheckBox>("TestCreatedArchiveBox")!.IsChecked = true;
+            string larcOutput = larcOptions.Options.ArchiveName;
+            Click(larcOptions.FindControl<Button>("AcceptOptionsButton")!);
+            Pump(createLarc);
+            Check(File.Exists(larcOutput) && vm.HasArchive && vm.CurrentArchivePath == larcOutput && vm.StatusMessage.Contains("verified"), "General creates, verifies and opens an encrypted LARC");
+            Check(larcOptions.Options.PasswordInput.Length == 0, "Closing General clears its draft password");
+            vm.PasswordInput = string.Empty;
+            Pump(vm.OpenArchiveFileAsync(archivePath));
+
+            string compressionFolder = Path.Combine(temporary, "compression folder");
+            Directory.CreateDirectory(compressionFolder);
+            var invalidOutput = new CompressionOptionsViewModel(vm, new[] { compressionFolder }) { ArchiveName = Path.Combine(compressionFolder, "self.larc"), SelectedFormatIndex = 0 };
+            Check(!invalidOutput.Validate() && invalidOutput.Status.Contains("outside"), "General rejects output inside a selected source folder");
 
             window.FindControl<MenuItem>("RecoverPasswordMenu")!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Dispatcher.UIThread.RunJobs();

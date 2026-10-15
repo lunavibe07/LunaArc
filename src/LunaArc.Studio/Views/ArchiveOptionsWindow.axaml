@@ -1,31 +1,72 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:LunaArc.Studio.ViewModels"
-        x:Class="LunaArc.Studio.Views.ArchiveOptionsWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Title="Archive options" Width="470" Height="410" CanResize="False"
-        Background="#F3F3F3" FontFamily="Segoe UI,Inter" FontSize="12"
-        WindowStartupLocation="CenterOwner">
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="18" ColumnDefinitions="130,*">
-        <TextBlock Text="Archive format:" VerticalAlignment="Center" />
-        <ComboBox Name="FormatPicker" Grid.Column="1" SelectedIndex="{Binding SelectedFormatIndex}" HorizontalAlignment="Stretch" Margin="0,0,0,10">
-            <ComboBoxItem Content="LunaArc (.larc)" /><ComboBoxItem Content="ZIP (.zip)" /><ComboBoxItem Content="TAR GZip (.tar.gz)" />
-        </ComboBox>
-        <TextBlock Grid.Row="1" Text="Compression level:" VerticalAlignment="Center" />
-        <ComboBox Grid.Row="1" Grid.Column="1" SelectedIndex="{Binding SelectedLevelIndex}" HorizontalAlignment="Stretch" Margin="0,0,0,10">
-            <ComboBoxItem Content="Store" /><ComboBoxItem Content="Fastest" /><ComboBoxItem Content="Fast" />
-            <ComboBoxItem Content="Normal" /><ComboBoxItem Content="Good" /><ComboBoxItem Content="Best" />
-        </ComboBox>
-        <TextBlock Grid.Row="2" Text="Archive password:" VerticalAlignment="Center" />
-        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PasswordInput}" PasswordChar="●" Watermark="Optional" Margin="0,0,0,8" />
-        <TextBlock Grid.Row="3" Grid.ColumnSpan="2" Text="Password is used to open encrypted archives. Only .larc output supports encryption." TextWrapping="Wrap" Foreground="#646B72" Margin="0,0,0,14" />
-        <Grid Grid.Row="4" Grid.ColumnSpan="2" RowDefinitions="Auto,*">
-            <TextBlock Text="Archive comment:" Margin="0,0,0,6" />
-            <TextBox Grid.Row="1" Text="{Binding ArchiveComment}" AcceptsReturn="True" TextWrapping="Wrap" />
-        </Grid>
-        <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
-            <Button Name="AcceptOptionsButton" Content="OK" Width="85" HorizontalContentAlignment="Center" Click="OnAcceptClicked" IsDefault="True" />
-            <Button Name="CancelOptionsButton" Content="Cancel" Width="85" HorizontalContentAlignment="Center" Click="OnCancelClicked" IsCancel="True" />
+﻿<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:vm="using:LunaArc.Studio.ViewModels" x:Class="LunaArc.Studio.Views.ArchiveOptionsWindow"
+ x:DataType="vm:CompressionOptionsViewModel" Title="Archive name and parameters - LunaArc"
+ Width="590" Height="570" MinWidth="560" MinHeight="540" RequestedThemeVariant="Dark"
+ Background="#252525" FontFamily="Segoe UI,Inter" FontSize="12" WindowStartupLocation="CenterOwner">
+ <Window.Styles>
+  <Style Selector="Button"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="12,3"/></Style>
+  <Style Selector="TabItem"><Setter Property="FontSize" Value="12"/></Style>
+  <Style Selector="RadioButton"><Setter Property="FontSize" Value="12"/></Style>
+  <Style Selector="CheckBox"><Setter Property="FontSize" Value="12"/></Style>
+ </Window.Styles>
+ <Grid Margin="12" RowDefinitions="*,Auto">
+  <TabControl Name="CompressionTabs">
+   <TabItem Header="General">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+     <StackPanel Margin="12" Spacing="12">
+      <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+       <TextBlock Text="Archive name" VerticalAlignment="Center"/>
+       <Button Name="BrowseArchiveButton" Grid.Column="1" Content="Browse..." IsEnabled="{Binding IsCreation}" Click="OnBrowse"/>
+       <TextBox Name="ArchiveNameBox" Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding ArchiveName}" IsEnabled="{Binding IsCreation}" Margin="0,6,0,0"/>
+      </Grid>
+      <Grid ColumnDefinitions="*,14,*">
+       <StackPanel Spacing="12">
+        <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
+         <StackPanel>
+          <TextBlock Text="Archive format" FontWeight="SemiBold" Margin="0,0,0,4"/>
+          <RadioButton Name="LarcFormatRadio" GroupName="Format" Content="LARC (.larc)" IsChecked="{Binding IsLarc}"/>
+          <RadioButton Name="ZipFormatRadio" GroupName="Format" Content="ZIP (.zip)" IsChecked="{Binding IsZip}"/>
+          <RadioButton Name="TarFormatRadio" GroupName="Format" Content="TAR GZip (.tar.gz)" IsChecked="{Binding IsTarGzip}"/>
+         </StackPanel>
+        </Border>
+        <StackPanel Spacing="5">
+         <TextBlock Text="Compression method"/>
+         <ComboBox Name="LevelPicker" SelectedIndex="{Binding SelectedLevelIndex}" HorizontalAlignment="Stretch">
+          <ComboBoxItem Content="Store"/><ComboBoxItem Content="Fastest"/><ComboBoxItem Content="Fast"/>
+          <ComboBoxItem Content="Normal"/><ComboBoxItem Content="Good"/><ComboBoxItem Content="Best"/>
+         </ComboBox>
         </StackPanel>
-    </Grid>
+       </StackPanel>
+       <StackPanel Grid.Column="2" Spacing="12">
+        <StackPanel Spacing="6">
+         <TextBlock Text="Archive mode"/>
+         <Border BorderBrush="#737373" BorderThickness="1" Padding="8,7"><TextBlock Text="Create new archive"/></Border>
+         <TextBlock Text="Choose an unused file name. Existing archives and source files are preserved." Foreground="#BDBDBD" TextWrapping="Wrap"/>
+        </StackPanel>
+        <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
+         <StackPanel>
+          <TextBlock Text="Archiving options" FontWeight="SemiBold" Margin="0,0,0,4"/>
+          <CheckBox Name="TestCreatedArchiveBox" Content="Test archived files" IsChecked="{Binding TestCreatedArchive}"/>
+         </StackPanel>
+        </Border>
+        <Button Name="SetArchivePasswordButton" Content="Set password..." HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnSetPassword"/>
+        <TextBlock Text="{Binding PasswordSummary}" Foreground="#BDBDBD"/>
+       </StackPanel>
+      </Grid>
+      <TextBlock Text="{Binding FormatNote}" TextWrapping="Wrap" Foreground="#BDBDBD"/>
+      <Expander Header="Archive comment" HorizontalAlignment="Stretch">
+       <TextBox Name="ArchiveCommentBox" Text="{Binding ArchiveComment}" AcceptsReturn="True" TextWrapping="Wrap" Height="70" Watermark="Optional comment for LARC / ZIP"/>
+      </Expander>
+      <TextBlock Text="{Binding SourceSummary}" Foreground="#BDBDBD"/>
+      <TextBlock Name="CompressionValidation" Text="{Binding Status}" Foreground="#FFD18B" TextWrapping="Wrap"/>
+     </StackPanel>
+    </ScrollViewer>
+   </TabItem>
+  </TabControl>
+  <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+   <Button Name="AcceptOptionsButton" Content="OK" Width="85" IsDefault="True" Click="OnAcceptClicked"/>
+   <Button Name="CancelOptionsButton" Content="Cancel" Width="85" IsCancel="True" Click="OnCancelClicked"/>
+   <Button Name="CompressionHelpButton" Content="Help" Width="85" Click="OnHelp"/>
+  </StackPanel>
+ </Grid>
 </Window>

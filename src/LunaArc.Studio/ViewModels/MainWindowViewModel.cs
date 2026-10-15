@@ -50,6 +50,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(CanEncrypt))]
     private int _selectedFormatIndex = 0;
 
+    [ObservableProperty] private bool _testCreatedArchive;
+
     public bool CanEncrypt => SelectedFormatIndex == 0;
 
     [ObservableProperty]
@@ -330,9 +332,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _activeJob = new LunaJobController();
         IsBusy = true;
         ProgressPercent = 0;
+        string? temporary = null;
 
         try
         {
+            outputArchivePath = CompressionOptionsViewModel.ValidateOutputPath(outputArchivePath, sourcePaths);
+            string directory = Path.GetDirectoryName(outputArchivePath)!;
+            Directory.CreateDirectory(directory);
+            temporary = Path.Combine(directory, ".lunaarc-" + Guid.NewGuid().ToString("N") + "." + (SelectedFormatIndex switch { 1 => "zip", 2 => "tar.gz", _ => "larc" }));
             OutputArchiveFormat fmt = SelectedFormatIndex switch
             {
                 1 => OutputArchiveFormat.Zip,
@@ -346,10 +353,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 sourcePaths,
                 new CompressOptions
                 {
-                    OutputArchivePath = outputArchivePath,
+                    OutputArchivePath = temporary,
                     Format = fmt,
                     Level = level,
-                    Password = string.IsNullOrWhiteSpace(PasswordInput) ? null : PasswordInput,
+                    Password = PasswordInput.Length == 0 ? null : PasswordInput,
                     ArchiveComment = ArchiveComment
                 },
                 _activeJob,
@@ -358,9 +365,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     UpdateProgress(done, total, $"Compressing: {file}");
                 }));
 
+            if (TestCreatedArchive)
+            {
+                StatusMessage = "Testing the new archive...";
+                var result = await Task.Run(() => _backend.TestArchiveAsync(temporary, PasswordInput.Length == 0 ? null : PasswordInput, _activeJob));
+                if (!result.IsHealthy) throw new InvalidDataException("The new archive failed verification. Sources and the destination were preserved.");
+            }
+            _activeJob.Token.ThrowIfCancellationRequested();
+            File.Move(temporary, outputArchivePath, overwrite: false);
+            temporary = null;
             ProgressPercent = 100;
-            StatusMessage = $"✅ Created archive: {outputArchivePath}";
             await OpenArchiveFileAsync(outputArchivePath);
+            StatusMessage = $"✅ Created{(TestCreatedArchive ? " and verified" : string.Empty)} archive: {outputArchivePath}";
         }
         catch (OperationCanceledException)
         {
@@ -372,6 +388,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         finally
         {
+            if (temporary != null && File.Exists(temporary)) File.Delete(temporary);
             IsBusy = false;
             _activeJob?.Dispose();
             _activeJob = null;

@@ -28,11 +28,8 @@ public partial class MainWindow : Window
             {
                 if (!File.Exists(request.Path) && !Directory.Exists(request.Path)) throw new FileNotFoundException("The selected source no longer exists.");
                 Vm.SelectedFormatIndex = request.Action == ExplorerAction.AddZip ? 1 : 0;
-                if (!await new ArchiveOptionsWindow(Vm).ShowDialog<bool>(this)) return;
-                string extension = Vm.SelectedFormatIndex switch { 1 => "zip", 2 => "tar.gz", _ => "larc" };
-                var output = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-                { Title = "Save new archive", DefaultExtension = extension, SuggestedFileName = ExplorerRequest.GetFolderName(request.Path) + "." + extension });
-                if (output?.TryGetLocalPath() is { } path) await Vm.CompressFilesToArchiveAsync(new[] { request.Path }, path);
+                var options = new ArchiveOptionsWindow(Vm, new[] { request.Path });
+                if (await options.ShowDialog<bool>(this)) await Vm.CompressFilesToArchiveAsync(new[] { request.Path }, options.OutputPath);
                 return;
             }
             if (request.Action == ExplorerAction.Open) { await Vm.OpenArchiveFileAsync(request.Path); return; }
@@ -130,32 +127,10 @@ public partial class MainWindow : Window
 
         if (sourceFiles.Count == 0) return;
 
-        var options = new ArchiveOptionsWindow(Vm);
-        if (!await options.ShowDialog<bool>(this)) return;
-
-        string defaultExt = Vm.SelectedFormatIndex switch
-        {
-            1 => "zip",
-            2 => "tar.gz",
-            _ => "larc"
-        };
-
-        var saveFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = "Save new archive",
-            DefaultExtension = defaultExt,
-            SuggestedFileName = $"Archive.{defaultExt}"
-        });
-
-        if (saveFile != null)
-        {
-            string? outPath = saveFile.TryGetLocalPath();
-            var inPaths = sourceFiles.Select(f => f.TryGetLocalPath()).Where(p => !string.IsNullOrEmpty(p)).Cast<string>().ToList();
-            if (!string.IsNullOrEmpty(outPath) && inPaths.Count > 0)
-            {
-                await Vm.CompressFilesToArchiveAsync(inPaths, outPath);
-            }
-        }
+        var inPaths = sourceFiles.Select(f => f.TryGetLocalPath()).Where(p => !string.IsNullOrEmpty(p)).Cast<string>().ToArray();
+        if (inPaths.Length == 0) return;
+        var options = new ArchiveOptionsWindow(Vm, inPaths);
+        if (await options.ShowDialog<bool>(this)) await Vm.CompressFilesToArchiveAsync(inPaths, options.OutputPath);
     }
 
     private async void OnItemDoubleTapped(object? sender, TappedEventArgs e)
