@@ -6,14 +6,14 @@ LunaArc is a Windows and Linux archive application built with .NET 8. It include
 
 ## Download
 
-Version **1.3.3**, with separate extraction Update/Overwrite modes, including Freshen existing files only. Windows and Linux builds passed verification in [this build run](https://github.com/lunavibe07/LunaArc/actions/runs/38675561665).
+Version **1.3.4**, with the General-only compression dialog, output browsing, archive verification and LARC password confirmation. Windows and Linux builds passed verification in [this build run](https://github.com/lunavibe07/LunaArc/actions/runs/38677949587).
 
 | Edition | Download | Getting started |
 | --- | --- | --- |
-| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/actions/runs/38675561665/artifacts/11946416484) | Extract the downloaded artifact ZIP, then run `LunaArc-1.3.3-setup-win-x64.exe`. |
-| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/actions/runs/38675561665/artifacts/11946286635) | Extract the artifact ZIP and the portable ZIP inside it, then run `LunaArc.exe`. |
-| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/actions/runs/38675561665/artifacts/11945642607) | Extract the ZIP, run `chmod +x LunaArc luna-cli`, then start `./LunaArc`. |
-| Windows SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/actions/runs/38675561665/artifacts/11946341466) | Extract `SHA256SUMS.txt` to verify the Setup EXE or portable ZIP. |
+| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/actions/runs/38677949587/artifacts/11947795573) | Extract the downloaded artifact ZIP, then run `LunaArc-1.3.4-setup-win-x64.exe`. |
+| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/actions/runs/38677949587/artifacts/11947340836) | Extract the artifact ZIP and the portable ZIP inside it, then run `LunaArc.exe`. |
+| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/actions/runs/38677949587/artifacts/11947105652) | Extract the ZIP, run `chmod +x LunaArc luna-cli`, then start `./LunaArc`. |
+| Windows SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/actions/runs/38677949587/artifacts/11947805466) | Extract `SHA256SUMS.txt` to verify the Setup EXE or portable ZIP. |
 
 Sign in to GitHub to download Actions artifacts. These links are currently scheduled to expire on **January 13, 2027**. For newer builds, open [Build and verify](https://github.com/lunavibe07/LunaArc/actions/workflows/build.yml), choose a successful run and scroll to **Artifacts**. Linux Studio requires a graphical desktop and the system libraries listed under [Requirements](#requirements).
 
