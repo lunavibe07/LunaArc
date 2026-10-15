@@ -266,6 +266,7 @@ internal static class Program
             Check(extractionOptions.FindControl<RadioButton>("ExtractAndReplaceRadio")!.IsChecked == true, "Update mode defaults to extracting all eligible files");
             Check(extractionOptions.FindControl<TextBox>("ExtractionPasswordBox")!.PasswordChar != '\0', "Extraction password masked");
             var extractionVm = (ExtractionOptionsViewModel)extractionOptions.DataContext!;
+            Check(extractionOptions.FindControl<CheckBox>("KeepBrokenFilesBox") is { IsChecked: false }, "Keeping broken files is an explicit opt-in");
             string longDestination = Path.Combine(temporary, "a long parent directory for the extraction dialog", "Downloads", "LunaArc-Windows-Setup (2)");
             extractionVm.Destination = longDestination;
             var destinationBox = extractionOptions.FindControl<TextBox>("DestinationBox")!;
@@ -381,6 +382,31 @@ internal static class Program
             Click(cancelConflictButtons.Children.OfType<Button>().Single(button => button.IsCancel));
             Pump(cancelConflictExtraction);
             Check(!vm.IsBusy && vm.StatusMessage.Contains("cancelled") && File.ReadAllText(Path.Combine(askDestination, "readme.md")) == "Keep original", "Cancelling an overwrite prompt releases the job and preserves existing data");
+            string corruptZip = Path.Combine(temporary, "broken-ui.zip");
+            byte[] brokenMarker = System.Text.Encoding.UTF8.GetBytes("Synthetic stored ZIP CRC failure for the extraction dialog");
+            using (var zip = ZipFile.Open(corruptZip, ZipArchiveMode.Create))
+            using (var payload = zip.CreateEntry("payload.txt", CompressionLevel.NoCompression).Open()) payload.Write(brokenMarker);
+            byte[] corruptBytes = File.ReadAllBytes(corruptZip);
+            int markerIndex = corruptBytes.AsSpan().IndexOf(brokenMarker);
+            Check(markerIndex >= 0, "Broken-file UI fixture contains a stored payload");
+            corruptBytes[markerIndex] ^= 1;
+            File.WriteAllBytes(corruptZip, corruptBytes);
+            string brokenDestination = Path.Combine(temporary, "broken-ui-output");
+            Directory.CreateDirectory(brokenDestination);
+            File.WriteAllText(Path.Combine(brokenDestination, "payload.txt"), "Preserve existing destination");
+            Task brokenExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, corruptZip));
+            Dispatcher.UIThread.RunJobs();
+            var brokenOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            brokenOptions.FindControl<TextBox>("DestinationBox")!.Text = brokenDestination;
+            brokenOptions.FindControl<RadioButton>("OverwriteAllRadio")!.IsChecked = true;
+            brokenOptions.FindControl<CheckBox>("KeepBrokenFilesBox")!.IsChecked = true;
+            Capture(brokenOptions, "extract-keep-broken.png");
+            Click(brokenOptions.FindControl<Button>("StartExtractionButton")!);
+            Pump(brokenExtraction);
+            Check(File.ReadAllText(Path.Combine(brokenDestination, "payload.txt")) == "Preserve existing destination"
+                && Directory.GetFiles(brokenDestination, "*.broken-*").Length == 1 && !vm.IsBusy,
+                "Keep broken files flows from General to extraction, retains failed data separately and preserves the destination");
+            Pump(vm.OpenArchiveFileAsync(archivePath));
             Click(window.FindControl<Button>("ExtractButton")!);
             Check(window.OwnedWindows.Single() is ExtractOptionsWindow, "Toolbar Extract To uses the same extraction dialog");
             Click(((ExtractOptionsWindow)window.OwnedWindows.Single()).FindControl<Button>("CancelExtractionButton")!);

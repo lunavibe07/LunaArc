@@ -1,13 +1,44 @@
 ﻿<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:vm="using:LunaArc.Studio.ViewModels"
  x:Class="LunaArc.Studio.Views.ExtractOptionsWindow" x:DataType="vm:ExtractionOptionsViewModel"
- Title="Extraction path and options - LunaArc" Width="560" Height="650" MinWidth="540" MinHeight="630"
+ Title="Extraction path and options - LunaArc" Width="560" Height="520" MinWidth="540" MinHeight="510"
  WindowStartupLocation="CenterOwner" RequestedThemeVariant="Dark"
  Background="#252525" FontFamily="Segoe UI,Inter" FontSize="12">
  <Window.Styles>
   <Style Selector="Button"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="12,3"/></Style>
-  <Style Selector="RadioButton"><Setter Property="MinHeight" Value="27"/><Setter Property="FontSize" Value="12"/></Style>
-  <Style Selector="CheckBox"><Setter Property="MinHeight" Value="28"/><Setter Property="FontSize" Value="12"/></Style>
+  <Style Selector="RadioButton">
+   <Setter Property="MinHeight" Value="20"/><Setter Property="Padding" Value="0"/><Setter Property="FontSize" Value="12"/>
+   <Setter Property="Template"><ControlTemplate>
+    <Grid ColumnDefinitions="13,*" Background="Transparent" MinHeight="20">
+     <Ellipse Width="13" Height="13" Stroke="#D4D4D4" StrokeThickness="1" VerticalAlignment="Center"/>
+     <Ellipse Width="7" Height="7" Fill="#EEEEEE" VerticalAlignment="Center" IsVisible="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}"/>
+     <Border Grid.Column="1" BorderBrush="#888888" BorderThickness="1" Margin="2,0,0,0" IsVisible="{Binding IsFocused, RelativeSource={RelativeSource TemplatedParent}}"/>
+     <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="5,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    </Grid>
+   </ControlTemplate></Setter>
+  </Style>
+  <Style Selector="CheckBox">
+   <Setter Property="MinHeight" Value="20"/><Setter Property="Padding" Value="0"/><Setter Property="FontSize" Value="12"/>
+   <Setter Property="Template"><ControlTemplate>
+    <Grid ColumnDefinitions="13,*" Background="Transparent" MinHeight="20">
+     <Border Width="13" Height="13" BorderBrush="#D4D4D4" BorderThickness="1" CornerRadius="2" VerticalAlignment="Center"/>
+     <Path Width="11" Height="10" Data="M1,5 L4,8 L10,1" Stroke="#EEEEEE" StrokeThickness="1.5" VerticalAlignment="Center" HorizontalAlignment="Center" IsVisible="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}"/>
+     <Border Grid.Column="1" BorderBrush="#888888" BorderThickness="1" Margin="2,0,0,0" IsVisible="{Binding IsFocused, RelativeSource={RelativeSource TemplatedParent}}"/>
+     <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="5,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    </Grid>
+   </ControlTemplate></Setter>
+  </Style>
+  <Style Selector="RadioButton:disabled"><Setter Property="Opacity" Value="0.45"/></Style>
+  <Style Selector="CheckBox:disabled"><Setter Property="Opacity" Value="0.45"/></Style>
+  <Style Selector="HeaderedContentControl.extractionGroup">
+   <Setter Property="Template"><ControlTemplate>
+    <Grid RowDefinitions="Auto,*">
+     <Border Grid.RowSpan="2" Margin="0,7,0,0" BorderBrush="#8A8A8A" BorderThickness="1"/>
+     <ContentPresenter Content="{TemplateBinding Header}" Background="#252525" Padding="3,0" Margin="6,0,0,0" HorizontalAlignment="Left"/>
+     <ContentPresenter Grid.Row="1" Content="{TemplateBinding Content}" Margin="9,3,9,7"/>
+    </Grid>
+   </ControlTemplate></Setter>
+  </Style>
   <Style Selector="TabItem"><Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="28"/></Style>
   <Style Selector="TextBox.destinationPath:not(:focus)"><Setter Property="Foreground" Value="Transparent"/></Style>
   <Style Selector="TreeViewItem" x:DataType="vm:ExtractionFolderNode"><Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/></Style>
@@ -25,31 +56,29 @@
       <Button Name="BrowseDestinationButton" Grid.Column="1" Content="Browse..." Click="OnBrowse" Margin="8,0,0,0" Width="88"/>
      </Grid>
      <Grid Grid.Row="2" ColumnDefinitions="*,12,*">
-      <StackPanel Spacing="12">
-       <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
+      <StackPanel Spacing="6">
+       <HeaderedContentControl Name="UpdatemodeGroup" Classes="extractionGroup" Header="Update mode">
         <StackPanel>
-         <TextBlock Text="Update mode" FontWeight="SemiBold" Margin="0,0,0,5"/>
          <RadioButton Name="ExtractAndReplaceRadio" GroupName="Update" Content="Extract and replace files" IsChecked="{Binding ExtractAndReplace}"/>
          <RadioButton Name="ExtractAndUpdateRadio" GroupName="Update" Content="Extract and update files" IsChecked="{Binding ExtractAndUpdate}"/>
          <RadioButton Name="FreshenExistingRadio" GroupName="Update" Content="Freshen existing files only" IsChecked="{Binding FreshenExisting}"/>
         </StackPanel>
-       </Border>
-       <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
+       </HeaderedContentControl>
+       <HeaderedContentControl Name="OverwritemodeGroup" Classes="extractionGroup" Header="Overwrite mode">
         <StackPanel>
-         <TextBlock Text="Overwrite mode" FontWeight="SemiBold" Margin="0,0,0,5"/>
          <RadioButton Name="AskOverwriteRadio" GroupName="Overwrite" Content="Ask before overwrite" IsChecked="{Binding AskBeforeOverwrite}"/>
          <RadioButton Name="OverwriteAllRadio" GroupName="Overwrite" Content="Overwrite without prompt" IsChecked="{Binding OverwriteAll}"/>
          <RadioButton Name="SkipExistingBox" GroupName="Overwrite" Content="Skip existing files" IsChecked="{Binding SkipExisting}"/>
          <RadioButton Name="RenameRadio" GroupName="Overwrite" Content="Rename automatically" IsChecked="{Binding RenameAutomatically}"/>
         </StackPanel>
-       </Border>
-       <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
+       </HeaderedContentControl>
+       <HeaderedContentControl Name="MiscellaneousGroup" Classes="extractionGroup" Header="Miscellaneous">
         <StackPanel>
-         <TextBlock Text="Miscellaneous" FontWeight="SemiBold" Margin="0,0,0,5"/>
-         <CheckBox Name="DisplayAfterExtractionBox" Content="Display files after extraction" IsChecked="{Binding DisplayAfterExtraction}"/>
+         <CheckBox Name="KeepBrokenFilesBox" Content="Keep broken files" IsChecked="{Binding KeepBrokenFiles}" ToolTip.Tip="Keep available failed output under a unique .broken name. Supported by ZIP, LARC and SharpCompress extraction; TAR does not retain partial files."/>
+         <CheckBox Name="DisplayAfterExtractionBox" Content="{Binding DisplayFilesLabel}" IsChecked="{Binding DisplayAfterExtraction}"/>
         </StackPanel>
-       </Border>
-       <TextBlock Text="Skip preserves existing files in every update mode. Choose Ask or Overwrite to update older copies." TextWrapping="Wrap" Foreground="#BDBDBD"/>
+       </HeaderedContentControl>
+       <TextBlock Text="Skip preserves existing files in every update mode. Choose Ask or Overwrite to update older copies." TextWrapping="Wrap" Foreground="#BDBDBD" Margin="0,4,0,0"/>
       </StackPanel>
       <Grid Grid.Column="2" RowDefinitions="Auto,*">
        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">

@@ -273,7 +273,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ExtractCurrentArchiveToAsync(destinationFolder, skipExisting ? OverwriteMode.SkipExisting : OverwriteMode.OverwriteAll);
 
     public async Task<bool> ExtractCurrentArchiveToAsync(string destinationFolder, OverwriteMode overwriteMode,
-        Func<string, OverwriteMode>? onConflict = null, ExtractionUpdateMode updateMode = ExtractionUpdateMode.ExtractAndReplace)
+        Func<string, OverwriteMode>? onConflict = null, ExtractionUpdateMode updateMode = ExtractionUpdateMode.ExtractAndReplace, bool keepBrokenFiles = false)
     {
         if (IsBusy) return false;
         if (string.IsNullOrWhiteSpace(CurrentArchivePath) || !File.Exists(CurrentArchivePath))
@@ -302,6 +302,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     SmartFolderCreation = false,
                     OverwriteMode = overwriteMode,
                     UpdateMode = updateMode,
+                    KeepBrokenFiles = keepBrokenFiles,
                     OnFileConflictCallback = onConflict
                 },
                 _activeJob,

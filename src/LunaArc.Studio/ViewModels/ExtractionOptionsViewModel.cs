@@ -33,6 +33,8 @@ public partial class ExtractionOptionsViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _password = string.Empty;
     [ObservableProperty] private bool _showPassword;
     [ObservableProperty] private bool _displayAfterExtraction;
+    [ObservableProperty] private bool _keepBrokenFiles;
+    public string DisplayFilesLabel => OperatingSystem.IsWindows() ? "Display files in Explorer" : "Display files in file manager";
     [ObservableProperty] private string _status = string.Empty;
     [ObservableProperty] private ExtractionFolderNode? _selectedFolder;
     [ObservableProperty]
