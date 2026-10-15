@@ -26,6 +26,7 @@ try
     await LarcHeaderErrorChecks.RunAsync(root, Check);
     await LargeArchiveChecks.RunAsync(root, Check);
     await AuthenticatedSplitChecks.RunAsync(root, Check);
+    await OperationChecks.RunAsync(root, Check);
 
     foreach (var (format, extension, password, level) in new[]
     {

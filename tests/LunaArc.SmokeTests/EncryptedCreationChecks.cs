@@ -34,13 +34,6 @@ internal static class EncryptedCreationChecks
             check(rejected, format + " rejects wrong password");
             string destination = Path.Combine(root, "encrypted-roundtrip-" + format);
             await backend.ExtractAsync(archive, new ExtractOptions { DestinationDirectory = destination, Password = password }, job);
-            if (format == OutputArchiveFormat.EncryptedTarGz)
-            {
-                string inner = Directory.GetFiles(destination, "*.tar.gz").Single();
-                string unpacked = destination + "-inner";
-                await backend.ExtractAsync(inner, new ExtractOptions { DestinationDirectory = unpacked }, job);
-                destination = unpacked;
-            }
             check(File.ReadAllText(Path.Combine(destination, "encrypted-source", "日本語.txt")) == File.ReadAllText(Path.Combine(source, "日本語.txt"))
                 && File.ReadAllBytes(Path.Combine(destination, "encrypted-source", "data.bin")).SequenceEqual(File.ReadAllBytes(Path.Combine(source, "data.bin")))
                 && new FileInfo(Path.Combine(destination, "encrypted-source", "empty.bin")).Length == 0

@@ -27,8 +27,9 @@ public static class ArchiveCreationService
                 throw new ArgumentException("Save the archive outside the selected sources.");
         }
         string directory = Path.GetDirectoryName(output)!;
+        CreationSpaceEstimate.Check(sources, options, sfx, recovery, test || options.DeleteSourceAfterArchiving || options.SplitVolumeSizeBytes.HasValue, job);
         Directory.CreateDirectory(directory);
-        string extension = options.Format switch { OutputArchiveFormat.Zip => ".zip", OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.SevenZip or OutputArchiveFormat.EncryptedTarGz => ".7z", _ => ".larc" };
+        string extension = options.Format switch { OutputArchiveFormat.Zip => ".zip", OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.EncryptedTarGz => ".tar.gz.7z", OutputArchiveFormat.SevenZip => ".7z", _ => ".larc" };
         string temporary = Path.Combine(directory, ".lunaarc-" + Guid.NewGuid().ToString("N") + extension);
         string executable = temporary + ".sfx";
         string record = temporary + ".lrec";
@@ -53,11 +54,12 @@ public static class ArchiveCreationService
             string finalStage = temporary;
             if (sfx)
             {
+                job.Report("Building self-extractor");
                 await SfxArchive.CreateAsync(sfxStub ?? SfxArchive.GuiStubPath, temporary, executable, options.Format, job.Token);
                 if (!(await backend.TestArchiveAsync(executable, options.Password, job)).IsHealthy) throw new InvalidDataException("SFX verification failed.");
                 finalStage = executable;
             }
-            if (recovery) await ArchiveRecoveryRecord.CreateAsync(finalStage, record, job);
+            if (recovery) { job.Report("Creating recovery data"); await ArchiveRecoveryRecord.CreateAsync(finalStage, record, job); }
             job.WaitIfPaused(); job.Token.ThrowIfCancellationRequested();
             ArchiveLock.EnsureWritable(output);
             File.Move(finalStage, output, overwrite: false); moved = true;

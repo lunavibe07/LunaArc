@@ -34,6 +34,7 @@ public static class SplitArchive
         try
         {
             var parts = new List<Part>(); byte[] buffer = new byte[65536];
+            job.Report("Splitting volumes", 0, sourceLength);
             for (int index = 1; index <= count; index++)
             {
                 string partName = name + $".{index:D3}";
@@ -47,6 +48,7 @@ public static class SplitArchive
                         int read = await input.ReadAsync(buffer.AsMemory(0, (int)Math.Min(remaining, buffer.Length)), job.Token);
                         if (read == 0) throw new EndOfStreamException("Source changed while splitting.");
                         hash.AppendData(buffer, 0, read); await output.WriteAsync(buffer.AsMemory(0, read), job.Token); remaining -= read;
+                        job.Report("Splitting volumes", input.Position, sourceLength, partName);
                     }
                 }
                 parts.Add(new Part(partName, length, Convert.ToHexString(hash.GetHashAndReset())));
@@ -84,8 +86,8 @@ public static class SplitArchive
             ?? throw new InvalidDataException("Invalid split manifest.");
         if (manifest.Version != 1 || manifest.ArchiveName != Path.GetFileName(basePath) || manifest.Size <= 0 || manifest.Parts is not { Count: > 0 and <= 10000 })
             throw new InvalidDataException("Invalid split manifest metadata.");
-        string extension = manifest.ArchiveName.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) ? ".tar.gz" : Path.GetExtension(basePath);
-        if (!new[] { ".larc", ".zip", ".7z", ".gz" , ".tar.gz" }.Contains(extension.ToLowerInvariant()))
+        string extension = manifest.ArchiveName.EndsWith(".tar.gz.7z", StringComparison.OrdinalIgnoreCase) ? ".tar.gz.7z" : manifest.ArchiveName.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) ? ".tar.gz" : Path.GetExtension(basePath);
+        if (!new[] { ".larc", ".zip", ".7z", ".gz" , ".tar.gz", ".tar.gz.7z" }.Contains(extension.ToLowerInvariant()))
             throw new InvalidDataException("Unsupported split archive extension.");
         long total = 0;
         for (int i = 0; i < manifest.Parts.Count; i++)
@@ -96,6 +98,9 @@ public static class SplitArchive
             total += part.Size;
         }
         if (total != manifest.Size) throw new InvalidDataException("Split set length mismatch.");
+        job.Report("Checking free space");
+        DiskSpaceGuard.Ensure(new[] { new DiskSpaceRequirement(Path.GetTempPath(), total, "split-set assembly") }, job.FreeSpaceProbe);
+        job.Report("Assembling parts", 0, total);
         var result = new TemporaryArchive(extension);
         try
         {
@@ -115,6 +120,7 @@ public static class SplitArchive
                     if (read == 0) throw new EndOfStreamException("Truncated split part: " + part.Name);
                     hash.AppendData(buffer, 0, read); await output.WriteAsync(buffer.AsMemory(0, read), job.Token);
                     remaining -= read;
+                    job.Report("Assembling parts", output.Position, total, part.Name);
                 }
                 if (input.Length != part.Size || !CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), Convert.FromHexString(part.Sha256)))
                     throw new InvalidDataException("Split part checksum mismatch: " + part.Name);

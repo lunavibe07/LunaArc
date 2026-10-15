@@ -51,13 +51,7 @@ public sealed class StandaloneCompressionSession : IDisposable
                 DeleteSourceAfterArchiving = settings.DeleteSourceAfterArchiving, SplitVolumeSizeBytes = settings.SplitVolumeSizeBytes
             };
             string result = await Task.Run(() => ArchiveCreationService.CreateAsync(new[] { request.Path }, options, job,
-                settings.CreateSfx, settings.AddRecoveryRecord, settings.LockArchive, settings.TestCreatedArchive,
-                progress: (done, total, file) => Dispatcher.UIThread.Post(() =>
-                {
-                    if (!Progress.IsWorking || job.IsCancelled) return;
-                    Progress.ProgressPercent = Math.Clamp(100.0 * done / Math.Max(1, total), 0, 100);
-                    Progress.StatusMessage = "Compressing: " + file;
-                })));
+                settings.CreateSfx, settings.AddRecoveryRecord, settings.LockArchive, settings.TestCreatedArchive));
             Progress.ProgressPercent = 100;
             if (options.DeleteSourceAfterArchiving)
             {

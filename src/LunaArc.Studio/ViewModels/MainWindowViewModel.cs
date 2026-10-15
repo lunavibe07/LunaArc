@@ -92,6 +92,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private double _progressPercent = 0;
+    [ObservableProperty] private string _progressDetails = string.Empty;
+    [ObservableProperty] private bool _isProgressIndeterminate;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStartOperation))]
@@ -307,7 +309,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return false;
         }
 
-        _activeJob = new LunaJobController();
+        _activeJob = CreateProgressJob();
         IsBusy = true;
         ProgressPercent = 0;
 
@@ -363,7 +365,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         bool deleteSources = DeleteSourceAfterArchiving, sfx = CreateSfx, recovery = AddRecoveryRecord, locked = LockArchive;
         DeleteSourceAfterArchiving = CreateSfx = AddRecoveryRecord = LockArchive = false;
         if (IsBusy) return;
-        _activeJob = new LunaJobController();
+        _activeJob = CreateProgressJob();
         IsBusy = true;
         ProgressPercent = 0;
         try
@@ -392,7 +394,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public async Task RepairArchiveAsync(string damaged, string output)
     {
         if (IsBusy) return;
-        _activeJob = new LunaJobController();
+        _activeJob = CreateProgressJob();
         IsBusy = true;
         try
         {
@@ -416,7 +418,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _activeJob = new LunaJobController();
+        _activeJob = CreateProgressJob();
         IsBusy = true;
         try
         {
@@ -504,6 +506,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         finally { IsBusy = false; }
     }
 
+    private LunaJobController CreateProgressJob()
+    {
+        var job = new LunaJobController();
+        ProgressDetails = string.Empty; IsProgressIndeterminate = true;
+        job.ProgressChanged += progress => Dispatcher.UIThread.Post(() =>
+        {
+            if (job != _activeJob || !IsBusy || job.IsCancelled) return;
+            ProgressPercent = progress.Percent; IsProgressIndeterminate = progress.IsIndeterminate;
+            StatusMessage = progress.Stage + (progress.File.Length > 0 ? ": " + progress.File : "...");
+            ProgressDetails = progress.Detail;
+        });
+        return job;
+    }
+
     private void HandleLiveFileEdited(string tempPath, string entryRelativePath)
     {
         Dispatcher.UIThread.Post(() => StatusMessage = $"💡 Preview file '{entryRelativePath}' was modified. Changes are not saved to the archive.");
@@ -515,6 +531,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         Dispatcher.UIThread.Post(() =>
         {
             if (job == null || job != _activeJob || !IsBusy) return;
+            IsProgressIndeterminate = false;
             ProgressPercent = Math.Round((double)done * 100 / Math.Max(1, total), 1);
             StatusMessage = message;
         });

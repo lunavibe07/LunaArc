@@ -55,7 +55,7 @@ public partial class CompressionOptionsViewModel : ObservableObject
     public string FormatNote => IsLarc ? "LARC passwords use authenticated AES-256-GCM v2, including file names. Older LunaArc versions cannot open v2; v1 remains readable."
         : IsZip ? "ZIP supports WinZip AES-256 passwords and comments. File names remain visible. ZIP64 supports large files and many entries. Volume splitting uses LunaArc numbered parts plus a manifest."
         : IsSevenZip ? "7z supports AES-256 passwords with encrypted file names and solid LZMA2 compression. Encoding needs the packaged 7-Zip tool and staging space. Pause applies before/after encoding; Cancel stops it."
-        : "With a password, creates .tar.gz.7z: an AES-256 encrypted 7z containing one TAR GZip. Extract twice. Source deletion is unavailable for this wrapper.";
+        : "With a password, creates .tar.gz.7z: an AES-256 encrypted 7z containing one TAR GZip. LunaArc extracts both layers automatically. Source deletion is unavailable for this wrapper.";
     public string PasswordSummary => PasswordInput.Length == 0 ? "No password set" : "Password set";
 
     public CompressionOptionsViewModel(MainWindowViewModel settings, IReadOnlyList<string>? sources = null)

@@ -11,6 +11,22 @@ public partial class ExtractionProgressViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _archiveName = string.Empty;
     [ObservableProperty] private string _statusMessage = "Checking archive encryption...";
     [ObservableProperty] private double _progressPercent;
+    [ObservableProperty] private string _transferDetails = string.Empty;
+    [ObservableProperty] private bool _isIndeterminate = true;
+    public ExtractionProgressViewModel()
+    {
+        Controller.ProgressChanged += progress => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (!IsWorking || Controller.IsCancelled) return;
+            ApplyProgress(progress);
+        });
+    }
+    public void ApplyProgress(OperationProgress progress)
+    {
+        ProgressPercent = progress.Percent; IsIndeterminate = progress.IsIndeterminate;
+        StatusMessage = progress.Stage + (progress.File.Length > 0 ? ": " + progress.File : "...");
+        TransferDetails = progress.Detail;
+    }
     [ObservableProperty] private bool _canPause;
     [ObservableProperty] private string _pauseText = "Pause";
     [ObservableProperty]
@@ -35,6 +51,8 @@ public partial class ExtractionProgressViewModel : ObservableObject, IDisposable
     public void Finish(string message)
     {
         IsWorking = CanPause = false;
+        IsIndeterminate = false;
+        TransferDetails = string.Empty;
         StatusMessage = message;
     }
     public void Dispose() { Controller.Cancel(); Controller.Dispose(); }

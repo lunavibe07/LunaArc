@@ -53,6 +53,8 @@ internal static class AuthenticatedLarc
         using var input = File.OpenRead(path); byte[] header = new byte[HeaderSize];
         await input.ReadExactlyAsync(header, job.Token); long length = ValidateHeader(header, input.Length);
         if (string.IsNullOrEmpty(password)) throw new UnauthorizedAccessException("This LARC v2 archive requires a password.");
+        job.Report("Checking free space");
+        DiskSpaceGuard.Ensure(new[] { new DiskSpaceRequirement(Path.GetTempPath(), length, "LARC authentication staging") }, job.FreeSpaceProbe);
         var result = new TemporaryArchive(".larc");
         try
         {
@@ -71,6 +73,8 @@ internal static class AuthenticatedLarc
         try
         {
             using var aes = new AesGcm(key, 16);
+            string stage = encrypt ? "Encrypting archive" : "Authenticating archive";
+            job.Report(stage, 0, length);
             uint index = 0;
             // A mandatory final empty record authenticates completion, even at an exact chunk boundary.
             for (long remaining = length; ; index++)
@@ -94,6 +98,7 @@ internal static class AuthenticatedLarc
                 }
                 if (count == 0) break;
                 remaining -= count;
+                job.Report(stage, length - remaining, length);
             }
         }
         finally { CryptographicOperations.ZeroMemory(key); CryptographicOperations.ZeroMemory(plain); }

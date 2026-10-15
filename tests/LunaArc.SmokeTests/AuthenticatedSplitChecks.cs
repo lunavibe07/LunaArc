@@ -66,11 +66,6 @@ internal static class AuthenticatedSplitChecks
             check((await backend.TestArchiveAsync(first, key, job)).IsHealthy, format + " split set verifies after automatic assembly");
             string unpack = splitBase + "-out";
             await backend.ExtractAsync(first, new ExtractOptions { DestinationDirectory = unpack, Password = key }, job);
-            if (format == OutputArchiveFormat.EncryptedTarGz)
-            {
-                string inner = Directory.GetFiles(unpack).Single(); string innerOut = unpack + "-inner";
-                await backend.ExtractAsync(inner, new ExtractOptions { DestinationDirectory = innerOut }, job); unpack = innerOut;
-            }
             check(File.ReadAllBytes(Path.Combine(unpack, Path.GetFileName(source))).SequenceEqual(data), format + " split round trip content matches");
             check(await Rejected(() => ArchiveCreationService.CreateAsync(new[] { source }, new CompressOptions { OutputArchivePath = splitBase,
                 SplitVolumeSizeBytes = 1024 * 1024 }, job)), "Existing split set is never overwritten");

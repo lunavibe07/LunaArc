@@ -78,10 +78,6 @@ with tempfile.TemporaryDirectory(prefix="LunaArc_Published_") as temporary:
         run(cli, "test", encrypted, "-p", "wrong-synthetic-password", success=False)
         unpacked = root / (command + "-decrypted")
         run(cli, "extract-here", encrypted, "-o", unpacked, "-p", fake_password)
-        if command == "pack-targz":
-            inner = next(unpacked.glob("*.tar.gz"))
-            unpacked = root / "targz-inner-decrypted"
-            run(cli, "extract-here", inner, "-o", unpacked)
         assert (unpacked / "source" / "same.txt").read_text() == "Synthetic standalone extractor fixture"
         encrypted_sfx = root / (command + "-encrypted-sfx" + (".exe" if os.name == "nt" else ".run"))
         run(cli, command, source, "-o", encrypted_sfx, "-p", fake_password, "--sfx", "on")

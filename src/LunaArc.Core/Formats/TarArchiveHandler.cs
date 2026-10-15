@@ -23,17 +23,26 @@ internal static class TarArchiveHandler
             ? file : new GZipStream(file, CompressionMode.Decompress);
     }
 
-    public static Task<FlatVfsArena> ReadCatalogAsync(string path, CancellationToken ct) => Task.Run(() =>
+    public static Task<FlatVfsArena> ReadCatalogAsync(string path, CancellationToken ct, LunaJobController? job = null) => Task.Run(() =>
     {
         using var stream = Open(path);
         using var reader = new TarReader(stream);
         var arena = new FlatVfsArena();
+        job?.Report("Reading TAR metadata");
         while (reader.GetNextEntry() is { } entry)
         {
             ct.ThrowIfCancellationRequested();
+            job?.WaitIfPaused();
             ValidateEntryType(entry);
             arena.AddEntry(entry.Name, entry.Length, entry.Length, 0, entry.ModificationTime.UtcDateTime,
                 entry.EntryType == TarEntryType.Directory, false);
+            // GZip cannot seek past bodies. Drain in bounded chunks so pause/cancel remain responsive.
+            if (job != null && !stream.CanSeek && entry.DataStream != null)
+            {
+                using var discard = new VerificationWriteStream(job, entry.Length);
+                entry.DataStream.CopyTo(discard, 65536);
+                if (discard.Written != entry.Length) throw new InvalidDataException("Truncated TAR entry body.");
+            }
         }
         return arena;
     }, ct);
@@ -44,7 +53,7 @@ internal static class TarArchiveHandler
         using var stream = Open(path);
         using var reader = new TarReader(stream);
         long processed = 0;
-        long total = (await ReadCatalogAsync(path, job.Token)).TotalUncompressedBytes;
+        long total = (await ReadCatalogAsync(path, job.Token, job)).TotalUncompressedBytes;
         while (reader.GetNextEntry() is { } entry)
         {
             job.WaitIfPaused();

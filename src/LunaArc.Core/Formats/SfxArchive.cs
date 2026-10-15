@@ -29,6 +29,8 @@ public static class SfxArchive
         if (format is not (OutputArchiveFormat.LarcNative or OutputArchiveFormat.Zip or OutputArchiveFormat.TarGz or OutputArchiveFormat.SevenZip or OutputArchiveFormat.EncryptedTarGz))
             throw new NotSupportedException("Unsupported SFX payload format.");
         if (IsSfx(stub)) throw new InvalidDataException("An SFX cannot be used as an extractor stub.");
+        LunaArc.Core.Pipeline.DiskSpaceGuard.Ensure(new[] { new LunaArc.Core.Pipeline.DiskSpaceRequirement(output,
+            checked(new FileInfo(stub).Length + new FileInfo(archive).Length + FooterSize), "self-extracting archive output") });
         bool created = false;
         try
         {
@@ -62,7 +64,7 @@ public static class SfxArchive
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(output, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
     }
 
-    public static async Task<Payload?> OpenPayloadAsync(string path, CancellationToken ct)
+    public static async Task<Payload?> OpenPayloadAsync(string path, CancellationToken ct, LunaArc.Core.Pipeline.LunaJobController? job = null)
     {
         await using var input = File.OpenRead(path);
         if (input.Length < FooterSize) return null;
@@ -75,12 +77,15 @@ public static class SfxArchive
         string extension = (OutputArchiveFormat)BinaryPrimitives.ReadInt32LittleEndian(footer.AsSpan(24)) switch
         {
             OutputArchiveFormat.LarcNative => ".larc", OutputArchiveFormat.Zip => ".zip",
-            OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.SevenZip or OutputArchiveFormat.EncryptedTarGz => ".7z",
+            OutputArchiveFormat.TarGz => ".tar.gz", OutputArchiveFormat.EncryptedTarGz => ".tar.gz.7z", OutputArchiveFormat.SevenZip => ".7z",
             _ => throw new InvalidDataException("Unsupported SFX payload format.")
         };
         if (offset <= 0 || length <= 0 || offset > input.Length - FooterSize || length != input.Length - FooterSize - offset ||
             BinaryPrimitives.ReadInt32LittleEndian(footer.AsSpan(28)) != 0)
             throw new InvalidDataException("Invalid SFX payload bounds.");
+        job?.Report("Checking free space");
+        LunaArc.Core.Pipeline.DiskSpaceGuard.Ensure(new[] { new LunaArc.Core.Pipeline.DiskSpaceRequirement(Path.GetTempPath(), length, "SFX payload staging") }, job?.FreeSpaceProbe);
+        job?.Report("Reading SFX payload", 0, length);
         string directory = Directory.CreateTempSubdirectory("LunaArc_SFX_").FullName;
         var result = new Payload(directory, Path.Combine(directory, "payload" + extension));
         try
@@ -96,6 +101,7 @@ public static class SfxArchive
                 hash.AppendData(buffer, 0, read);
                 await output.WriteAsync(buffer.AsMemory(0, read), ct);
                 remaining -= read;
+                job?.Report("Reading SFX payload", length - remaining, length);
             }
             if (!CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), footer.AsSpan(32, 32)))
                 throw new InvalidDataException("The SFX payload is damaged.");

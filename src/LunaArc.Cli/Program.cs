@@ -28,6 +28,12 @@ public static class Program
         string command = args[0].ToLowerInvariant();
         var backend = new StandardArchiveHandler();
         using var controller = new LunaJobController();
+        string previousStage = string.Empty;
+        controller.ProgressChanged += progress =>
+        {
+            if (progress.Stage != previousStage) { Console.Error.WriteLine(); previousStage = progress.Stage; }
+            Console.Error.Write($"\r{progress.Stage}: {(progress.IsIndeterminate ? "working..." : $"{progress.Percent:F0}%")} | {progress.Detail}    ");
+        };
         var sw = Stopwatch.StartNew();
 
         try
@@ -130,7 +136,7 @@ public static class Program
                     if (!SfxArchive.IsBundledProcess) throw new NotSupportedException("Use the published self-contained CLI to create a standalone extractor.");
                     string archive = Path.GetFullPath(args[1]);
                     string output = GetOptionValue(args, "-o") ?? throw new ArgumentException("Specify -o <new executable>.");
-                    var format = archive.EndsWith(".larc", StringComparison.OrdinalIgnoreCase) ? OutputArchiveFormat.LarcNative
+                    var format = archive.EndsWith(".tar.gz.7z", StringComparison.OrdinalIgnoreCase) ? OutputArchiveFormat.EncryptedTarGz : archive.EndsWith(".larc", StringComparison.OrdinalIgnoreCase) ? OutputArchiveFormat.LarcNative
                         : archive.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) ? OutputArchiveFormat.TarGz
                         : archive.EndsWith(".7z", StringComparison.OrdinalIgnoreCase) ? OutputArchiveFormat.SevenZip : OutputArchiveFormat.Zip;
                     if (!(await backend.TestArchiveAsync(archive, GetOptionValue(args, "-p"), controller)).IsHealthy) throw new InvalidDataException("Archive verification failed.");

@@ -194,7 +194,8 @@ public sealed class LarcNativeHandler
         string archivePath,
         ExtractOptions options,
         LunaJobController controller,
-        Action<long, long, string>? onProgress = null)
+        Action<long, long, string>? onProgress = null,
+        string progressStage = "Extracting files")
     {
         if (!Enum.IsDefined(options.UpdateMode)) throw new ArgumentOutOfRangeException(nameof(options.UpdateMode));
         await using var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -250,7 +251,8 @@ public sealed class LarcNativeHandler
                     ? await LunaAes256Cipher.CreateDecryptingStreamAsync(bounded, options.Password ?? string.Empty, controller.Token) : null;
                 Stream encoded = decrypted ?? (Stream)bounded;
                 using var decompressed = isStoreMode ? null : new DecompressionStream(encoded);
-                uint computedCrc = await CopyPayloadAsync(decompressed ?? encoded, output, entry.OrigSize, controller, _ => { });
+                uint computedCrc = await CopyPayloadAsync(decompressed ?? encoded, output, entry.OrigSize, controller,
+                    current => controller.Report(progressStage, extractedBytes + current, totalBytes, entry.Path));
                 // Reading to EOF also verifies CBC padding. The bounded view cannot consume the next entry.
                 if (decrypted != null) await decrypted.CopyToAsync(Stream.Null, controller.Token);
                 if (bounded.Remaining != 0 || computedCrc != entry.Crc32)

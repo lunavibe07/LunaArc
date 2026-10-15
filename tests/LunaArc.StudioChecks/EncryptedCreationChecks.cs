@@ -44,13 +44,6 @@ internal static class EncryptedCreationChecks
             using var job = new LunaJobController();
             var backend = new StandardArchiveHandler();
             Pump(backend.ExtractAsync(output, new ExtractOptions { DestinationDirectory = destination, Password = "synthetic-ui-暗号" }, job));
-            if (format == 2)
-            {
-                string inner = Directory.GetFiles(destination, "*.tar.gz").Single();
-                string unpacked = destination + "-inner";
-                Pump(backend.ExtractAsync(inner, new ExtractOptions { DestinationDirectory = unpacked }, job));
-                destination = unpacked;
-            }
             check(File.ReadAllText(Path.Combine(destination, Path.GetFileName(source))) == File.ReadAllText(source)
                 && !session.ProgressWindow.IsVisible && options.Options.PasswordInput.Length == 0, "Password General creates/decrypts format " + format + " and clears draft secrets");
         }

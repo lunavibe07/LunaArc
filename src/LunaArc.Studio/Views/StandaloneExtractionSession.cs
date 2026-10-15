@@ -49,7 +49,6 @@ public sealed class StandaloneExtractionSession : IDisposable
             Progress.StatusMessage = "Reading archive...";
             var backend = new StandardArchiveHandler();
             string? password = choice.Password.Length == 0 ? null : choice.Password;
-            await Task.Run(() => backend.ReadCatalogAsync(request.Path, password, job.Token));
             Progress.CanPause = true;
             Progress.StatusMessage = "Extracting files...";
             await Task.Run(() => backend.ExtractAsync(request.Path, new ExtractOptions
@@ -57,12 +56,7 @@ public sealed class StandaloneExtractionSession : IDisposable
                 DestinationDirectory = choice.Destination, Password = password, SmartFolderCreation = false,
                 UpdateMode = choice.UpdateMode, OverwriteMode = choice.OverwriteMode, KeepBrokenFiles = choice.KeepBrokenFiles,
                 OnFileConflictCallback = path => Dispatcher.UIThread.InvokeAsync(() => ExtractionConflictDialog.ShowAsync(ProgressWindow, path)).GetAwaiter().GetResult()
-            }, job, (done, total, file) => Dispatcher.UIThread.Post(() =>
-            {
-                if (!Progress.IsWorking || job.IsCancelled) return;
-                Progress.ProgressPercent = Math.Clamp(100.0 * done / Math.Max(1, total), 0, 100);
-                Progress.StatusMessage = "Extracting: " + file;
-            })));
+            }, job));
             job.Token.ThrowIfCancellationRequested();
             Progress.ProgressPercent = 100;
             if (choice.DisplayAfterExtraction)

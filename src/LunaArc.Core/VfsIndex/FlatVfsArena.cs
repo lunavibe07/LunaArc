@@ -24,6 +24,7 @@ public sealed class FlatVfsArena
     }
 
     public int Count => _count;
+    internal void MarkEncrypted() { for (int i = 0; i < _count; i++) _nodes[i].Attributes |= 0b0010; }
 
     public int AddEntry(
         string fullRelativePath,

@@ -12,7 +12,7 @@ public static class ArchivePasswordDetection
         using var split = await SplitArchive.OpenAsync(archivePath, job);
         if (split != null) return await RequiresPasswordAsync(split.Path, ct);
         if (AuthenticatedLarc.IsFile(archivePath)) { await AuthenticatedLarc.CheckHeaderAsync(archivePath, ct); return true; }
-        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, ct);
+        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, ct, job);
         if (sfx != null) return await RequiresPasswordAsync(sfx.Path, ct);
         if (LarcNativeHandler.IsLarcFile(archivePath))
         {
@@ -28,6 +28,11 @@ public static class ArchivePasswordDetection
         }
         try
         {
+            if (archivePath.EndsWith(".tar.gz.7z", StringComparison.OrdinalIgnoreCase))
+            {
+                using var archive = SharpCompress.Archives.ArchiveFactory.OpenArchive(archivePath, new SharpCompress.Readers.ReaderOptions());
+                return archive.Entries.Any(entry => entry.IsEncrypted);
+            }
             var catalog = await new StandardArchiveHandler().ReadCatalogAsync(archivePath, null, ct);
             return Enumerable.Range(0, catalog.Count).Any(i => catalog.GetNode(i).IsEncrypted);
         }

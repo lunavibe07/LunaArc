@@ -1,12 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:vm="using:LunaArc.Studio.ViewModels" x:Class="LunaArc.Studio.Views.ExtractionProgressWindow"
- x:DataType="vm:ExtractionProgressViewModel" Title="Extracting - LunaArc" Width="480" Height="220"
- MinWidth="420" MinHeight="220" WindowStartupLocation="CenterScreen" RequestedThemeVariant="Dark" Background="#102035" FontSize="12">
- <Grid Margin="18" RowDefinitions="Auto,*,Auto,Auto">
+ x:DataType="vm:ExtractionProgressViewModel" Title="Extracting - LunaArc" Width="480" Height="250"
+ MinWidth="420" MinHeight="250" WindowStartupLocation="CenterScreen" RequestedThemeVariant="Dark" Background="#102035" FontSize="12">
+ <Grid Margin="18" RowDefinitions="Auto,*,Auto,Auto,Auto">
   <TextBlock Text="{Binding ArchiveName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
   <TextBlock Name="ExtractionProgressStatus" Grid.Row="1" Text="{Binding StatusMessage}" ToolTip.Tip="{Binding StatusMessage}" TextWrapping="Wrap" Margin="0,12"/>
-  <ProgressBar Grid.Row="2" Value="{Binding ProgressPercent}" Minimum="0" Maximum="100" Height="18" ShowProgressText="True"/>
-  <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,14,0,0">
+  <ProgressBar Name="PhaseProgressBar" Grid.Row="2" Value="{Binding ProgressPercent}" IsIndeterminate="{Binding IsIndeterminate}" Minimum="0" Maximum="100" Height="18" ShowProgressText="True"/>
+  <TextBlock Name="TransferDetailsText" Grid.Row="3" Text="{Binding TransferDetails}" Margin="0,8,0,0"/>
+  <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,14,0,0">
    <Button Name="PauseExtractionButton" Content="{Binding PauseText}" Command="{Binding PauseResumeCommand}" IsEnabled="{Binding CanPause}" MinWidth="85"/>
    <Button Name="CancelStandaloneExtractionButton" Content="{Binding CloseText}" Command="{Binding CloseOrCancelCommand}" MinWidth="85"/>
   </StackPanel>

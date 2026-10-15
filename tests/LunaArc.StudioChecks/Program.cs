@@ -90,6 +90,7 @@ internal static class Program
             Click(((Grid)information.Content!).Children.OfType<Button>().Single());
             Check(window.OwnedWindows.Count() == 0, "Info dialog closes");
             Windows11MenuChecks.Run(window, temporary, Check, Capture);
+            PhaseProgressChecks.Run(Check, Capture);
 
             Click(window.FindControl<Button>("OptionsButton")!);
             var options = (ArchiveOptionsWindow)window.OwnedWindows.Single();

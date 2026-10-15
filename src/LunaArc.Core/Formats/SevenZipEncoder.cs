@@ -20,6 +20,7 @@ public static class SevenZipEncoder
         if (encrypted && (options.Password!.Length > 1024 || options.Password.IndexOfAny(new[] { '\r', '\n', '\0' }) >= 0))
             throw new ArgumentException("7z passwords must be at most 1024 characters and cannot contain line breaks or NUL.");
         string stage = Directory.CreateTempSubdirectory("LunaArc_7z_").FullName;
+        job.Report("Staging 7z inputs");
         try
         {
             string inputDirectory = Path.Combine(stage, "input");
@@ -51,6 +52,7 @@ public static class SevenZipEncoder
             foreach (string arg in new[] { "a", "-t7z", "-y", "-bd", "-bso0", "-bse0", "-m0=LZMA2", "-md=32m", "-mmt=2",
                 $"-mx={level}", options.SolidArchive ? "-ms=on" : "-ms=off", "--", Path.Combine(stage, "result.7z"), "." })
                 info.ArgumentList.Add(arg);
+            job.Report(encrypted ? "Encrypting 7z archive" : "Compressing 7z archive");
             using var process = Process.Start(info) ?? throw new IOException("Could not start the 7-Zip encoder.");
             var stdout = process.StandardOutput.ReadToEndAsync();
             var stderr = process.StandardError.ReadToEndAsync();

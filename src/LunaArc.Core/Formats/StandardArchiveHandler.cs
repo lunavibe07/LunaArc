@@ -19,19 +19,31 @@ public sealed class StandardArchiveHandler : IArchiveBackend
     public async Task<FlatVfsArena> ReadCatalogAsync(string archivePath, string? password = null, CancellationToken ct = default)
     {
         using var job = new LunaJobController(); using var cancellation = ct.Register(job.Cancel);
+        return await ReadCatalogCoreAsync(archivePath, password, ct, job);
+    }
+
+    private async Task<FlatVfsArena> ReadCatalogCoreAsync(string archivePath, string? password, CancellationToken ct, LunaJobController job)
+    {
         using var split = await SplitArchive.OpenAsync(archivePath, job);
-        if (split != null) return await ReadCatalogAsync(split.Path, password, ct);
+        if (split != null) return await ReadCatalogCoreAsync(split.Path, password, ct, job);
         using var authenticated = await AuthenticatedLarc.OpenAsync(archivePath, password, job);
         if (authenticated != null) return await _larcHandler.ReadCatalogAsync(authenticated.Path, authenticated: true);
-        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, ct);
-        if (sfx != null) return await ReadCatalogAsync(sfx.Path, password, ct);
+        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, ct, job);
+        if (sfx != null) return await ReadCatalogCoreAsync(sfx.Path, password, ct, job);
+        using var wrapped = await WrappedTarArchive.OpenAsync(archivePath, password, job);
+        if (wrapped != null)
+        {
+            var catalog = await TarArchiveHandler.ReadCatalogAsync(wrapped.Path, ct, job);
+            if (wrapped.IsEncrypted) catalog.MarkEncrypted();
+            return catalog;
+        }
         if (archivePath.EndsWith(".larc", StringComparison.OrdinalIgnoreCase) || LarcNativeHandler.IsLarcFile(archivePath))
         {
             return await _larcHandler.ReadCatalogAsync(archivePath, password);
         }
 
         if (TarArchiveHandler.Handles(archivePath))
-            return await TarArchiveHandler.ReadCatalogAsync(archivePath, ct);
+            return await TarArchiveHandler.ReadCatalogAsync(archivePath, ct, job);
 
         return await Task.Run(() =>
         {
@@ -68,14 +80,34 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         if (split != null) { await ExtractAsync(split.Path, options, controller, onProgress); return; }
         using var authenticated = await AuthenticatedLarc.OpenAsync(archivePath, options.Password, controller);
         if (authenticated != null) { await ExtractAsync(authenticated.Path, options, controller, onProgress); return; }
-        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, controller.Token);
+        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, controller.Token, controller);
         if (sfx != null) { await ExtractAsync(sfx.Path, options, controller, onProgress); return; }
+        using var wrapped = await WrappedTarArchive.OpenAsync(archivePath, options.Password, controller);
+        if (wrapped != null) { await ExtractAsync(wrapped.Path, options, controller, onProgress); return; }
+        controller.Report("Reading archive metadata");
+        var extractionCatalog = await ReadCatalogCoreAsync(archivePath, options.Password, controller.Token, controller);
+        long required = 0;
+        for (int i = 0; i < extractionCatalog.Count; i++)
+        {
+            var node = extractionCatalog.GetNode(i);
+            string key = extractionCatalog.GetFullPath(i);
+            if (node.IsDirectory || options.SelectedEntries is { Count: > 0 } && !options.SelectedEntries.Contains(key)) continue;
+            string destination = ZipSlipGuard.ValidateAndResolvePath(options.DestinationDirectory, key);
+            if (options.OverwriteMode == OverwriteMode.SkipExisting && File.Exists(destination)) continue;
+            if (options.UpdateMode == ExtractionUpdateMode.FreshenExisting && !File.Exists(destination)) continue;
+            required = checked(required + node.UncompressedSize);
+        }
+        controller.Report("Checking free space");
+        DiskSpaceGuard.Ensure(new[] { new DiskSpaceRequirement(options.DestinationDirectory, required, "extracted files") }, controller.FreeSpaceProbe);
+        var callerProgress = onProgress;
+        onProgress = (done, total, file) => { controller.Report("Extracting files", done, total, file); callerProgress?.Invoke(done, total, file); };
+        controller.Report("Extracting files", 0, required);
         string targetRoot = options.DestinationDirectory;
         if (!Enum.IsDefined(options.UpdateMode)) throw new ArgumentOutOfRangeException(nameof(options.UpdateMode));
 
         if (options.SmartFolderCreation)
         {
-            var catalog = await ReadCatalogAsync(archivePath, options.Password, controller.Token);
+            var catalog = extractionCatalog;
             if (!catalog.HasSingleRootFolder(out _) && options.UpdateMode != ExtractionUpdateMode.FreshenExisting)
             {
                 Directory.CreateDirectory(targetRoot);
@@ -205,6 +237,10 @@ public sealed class StandardArchiveHandler : IArchiveBackend
                 output.StartsWith(Path.TrimEndingDirectorySeparator(fullSource) + Path.DirectorySeparatorChar, comparison)))
                 throw new ArgumentException("The output archive must be outside the source files and directories.");
         }
+        var callerProgress = onProgress;
+        string stage = options.Format == OutputArchiveFormat.TarGz ? "Creating TAR GZip" : "Compressing files";
+        onProgress = (done, total, file) => { controller.Report(stage, done, total, file, options.Format != OutputArchiveFormat.TarGz); callerProgress?.Invoke(done, total, file); };
+        controller.Report(stage);
         if (options.Format == OutputArchiveFormat.LarcNative)
         {
             if (string.IsNullOrEmpty(options.Password)) await _larcHandler.CreateLarcArchiveAsync(sourcePaths, options, controller, onProgress);
@@ -367,8 +403,11 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         using (authenticated)
             if (authenticated != null) return await TestArchiveAsync(authenticated.Path, null, controller, onProgress);
         int total = 0;
-        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, controller.Token);
+        controller.Report("Verifying archive");
+        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, controller.Token, controller);
         if (sfx != null) return await TestArchiveAsync(sfx.Path, password, controller, onProgress);
+        using var wrapped = await WrappedTarArchive.OpenAsync(archivePath, password, controller);
+        if (wrapped != null) return await TestArchiveAsync(wrapped.Path, null, controller, onProgress);
         int passed = 0;
         var broken = new List<string>();
 
@@ -379,11 +418,13 @@ public sealed class StandardArchiveHandler : IArchiveBackend
             {
                 var catalog = await _larcHandler.ReadCatalogAsync(archivePath, password);
                 total = Enumerable.Range(0, catalog.Count).Count(i => !catalog.GetNode(i).IsDirectory);
+                controller.Report("Checking free space");
+                DiskSpaceGuard.Ensure(new[] { new DiskSpaceRequirement(tempDir, catalog.TotalUncompressedBytes, "archive verification staging") }, controller.FreeSpaceProbe);
                 await _larcHandler.ExtractLarcArchiveAsync(
                     archivePath,
                     new ExtractOptions { DestinationDirectory = tempDir, Password = password },
                     controller,
-                    (_, _, file) => onProgress?.Invoke(++passed, Math.Max(1, total), file));
+                    (_, _, file) => onProgress?.Invoke(++passed, Math.Max(1, total), file), progressStage: "Verifying LARC contents");
                 return new ArchiveTestResult(total, total, 0, broken);
             }
             catch (OperationCanceledException) { throw; }
