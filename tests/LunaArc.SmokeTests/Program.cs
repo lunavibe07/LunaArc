@@ -21,6 +21,7 @@ try
     var backend = new StandardArchiveHandler();
     await ExtractionUpdateChecks.RunAsync(root, backend, Check);
     await VerifiedSourceCleanupChecks.RunAsync(root, backend, Check);
+    await AdvancedArchivingChecks.RunAsync(root, Check);
 
     foreach (var (format, extension, password, level) in new[]
     {

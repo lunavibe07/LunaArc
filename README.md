@@ -6,7 +6,7 @@ LunaArc is a Windows and Linux archive application built with .NET 8. It include
 
 ## Download
 
-Version **1.3.5**, with six WinRAR-style Archiving options, verified opt-in source deletion and explicit unavailable controls. Windows and Linux builds passed verification in [this build run](https://github.com/lunavibe07/LunaArc/actions/runs/38679653618).
+Latest downloadable build: **1.3.5**. The source now targets **1.4.0**, adding SFX, solid 7z, recovery companions and advisory archive locks; links below still refer to 1.3.5 until a new build is verified. Windows and Linux builds passed verification in [this build run](https://github.com/lunavibe07/LunaArc/actions/runs/38679653618).
 
 | Edition | Download | Getting started |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Sign in to GitHub to download Actions artifacts. These links are currently sched
 | `src/LunaArc.Studio` | `LunaArc` desktop application using Avalonia and MVVM |
 | `tests/LunaArc.SmokeTests` | Executable integration checks using synthetic archive fixtures |
 
-Core uses SharpCompress 0.50.5 and ZstdSharp.Port 0.8.1. Studio uses Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Standard TAR and TAR GZip handling uses the .NET TAR APIs.
+Core uses SharpCompress 0.50.5 and ZstdSharp.Port 0.8.1. Published packages include the separate 7-Zip 26.04 encoder; see [license](branding/SevenZip_LICENSE.txt), [LGPL](branding/SevenZip_COPYING.txt) and [source/notice](branding/SevenZip_NOTICE.txt). Studio uses Avalonia 11.1.3 and CommunityToolkit.Mvvm 8.2.2. Standard TAR and TAR GZip handling uses the .NET TAR APIs.
 
 ## Desktop interface
 
@@ -43,7 +43,7 @@ The supplied Luna logo is used for application windows, Windows executable/Setup
 - **Info** shows the current archive path, folder/file summary and available comment. **Options** opens compression/password settings; cancelling restores the previous settings.
 - **File** includes close archive and exit; **Tools** contains context-menu installation. **Ctrl+O** opens an archive.
 
-The interface lists archive contents; it is not a general system-drive file browser. Delete and Repair commands are not exposed because the backend does not implement archive editing/repair. Both installed and portable Windows editions have this same interface. Toolbar artwork comes from Microsoft Fluent UI System Icons; its MIT notice is included in every published folder.
+The interface lists archive contents; it is not a general system-drive file browser. Tools includes repair using a LunaArc .lrec companion and explicit lock/unlock. Archive entry editing is not implemented. Both installed and portable Windows editions have this same interface. Toolbar artwork comes from Microsoft Fluent UI System Icons; its MIT notice is included in every published folder.
 
 ## Create an archive
 
@@ -51,28 +51,49 @@ Version **1.3.4** introduces a dark **Archive name and parameters** dialog conta
 
 1. Select files using **Add**, or right-click a file/folder in Explorer and choose a LunaArc compression command.
 2. Enter a full **Archive name**, or use **Browse...**. The suggested name is unused; select another name if the destination already exists. Save outside selected source folders.
-3. Choose **LARC**, **ZIP** or **TAR GZip** and a **Compression method** from Store through Best. Selecting a format updates the file extension.
+3. Choose **LARC**, **ZIP**, **TAR GZip** or **7z** and a **Compression method** from Store through Best. Selecting a format updates the file extension.
 4. Choose the supported **Archiving options** below. **Test archived files** verifies contents before the completed file is placed at the requested output path.
-5. Use **Set password...** for LARC encryption. Enter and confirm the password; **Show password** reveals the fields. Both fields can be left blank to remove the password. ZIP/TAR GZip password creation is not supported and is rejected.
-6. Expand **Archive comment** to enter an optional LARC/ZIP comment. TAR GZip comments are not supported.
+5. Use **Set password...** for LARC encryption. Enter and confirm the password; **Show password** reveals the fields. Both fields can be left blank to remove the password. ZIP/TAR GZip/7z password creation is not supported and is rejected.
+6. Expand **Archive comment** to enter an optional LARC/ZIP comment. TAR GZip and 7z comments are not supported.
 7. Select **OK** to create the archive and open it in LunaArc. **Cancel** discards draft changes. Sources are kept unless deletion was explicitly selected for this creation. **Help** explains the controls.
 
-Version **1.3.5** shows the six WinRAR-style archiving options with their actual availability:
+Version **1.4.0** implements all six archiving options, with format/platform limits shown in General:
 
 | Archiving option | Availability |
 | --- | --- |
 | Delete files after archiving | Supported for actual creation; off by default for every operation. Forces archive testing. |
-| Create SFX archive | Visible and disabled; not supported. |
-| Create solid archive | Visible and disabled; not supported. |
-| Add recovery record | Visible and disabled; not supported. |
+| Create SFX archive | Published self-contained packages; embeds a LunaArc extractor for the current OS and architecture. |
+| Create solid archive | 7z output only; genuine solid LZMA2 compression via the packaged 7-Zip 26.04 encoder. |
+| Add recovery record | Writes a .lrec companion with SHA-256 block checks and XOR parity. |
 | Test archived files | Supported; required and locked on while source deletion is selected. |
-| Lock archive | Visible and disabled; not supported. |
+| Lock archive | Writes a .lunalock companion and marks the archive read-only. Explicit unlock is under Tools. |
 
 **Delete files after archiving** first captures the selected sources, verifies and publishes the archive, extracts a verification copy and compares SHA-256 content hashes with the captured and current sources. Matching files are moved to private sibling names, checked again, then deleted. Changed, new or unarchived sources are kept; only represented empty directories are removed. This requires extra time and temporary extraction space. Links/reparse points, overlapping inputs, duplicate archive names and filesystem-root deletion are rejected. If a changed source cannot be restored to its original path, its retained location is reported. Cancelling during cleanup stops further deletion; previously removed files remain available in the completed archive.
 
 **Archive mode** currently creates new archives. Updating/synchronizing existing archives, RAR creation and custom dictionary controls are not available. Compression methods use each format's presets; ZIP and GZip map several presets to the same engine level.
 
-When opened from **Options**, General edits defaults for the next compression operation; output editing and source deletion are disabled, and OK does not modify an archive already open. New archive creation in Studio uses a temporary output, optionally verifies it, and moves it into place without replacing an existing file. Failure/cancellation before publication cleans up that temporary output and preserves sources. Source deletion is a one-operation opt-in and is never saved as a default.
+When opened from **Options**, General edits defaults for the next compression operation; output editing, source deletion, SFX, recovery and locking are disabled, and OK does not modify an archive already open. New archive creation in Studio uses a temporary output, optionally verifies it, and moves it into place without replacing an existing file. Failure/cancellation before publication cleans up that temporary output and preserves sources. Source deletion is a one-operation opt-in and is never saved as a default.
+
+## SFX, solid compression, recovery and locking
+
+- **Solid:** choose **7z**, then **Create solid archive**. Related files share a compression dictionary. Non-solid 7z remains available. The separate unmodified 7-Zip encoder is pinned by SHA-256 in the publish scripts; managed SharpCompress performs catalog reading, testing and guarded extraction. Staging uses additional disk space; LZMA2 uses a 32 MiB dictionary and two encoder threads. Pause applies before/after the external encoding phase; Cancel terminates the encoder. 7z creation currently has no password, comment or split-volume option. LARC v1 bytes and encryption are unchanged.
+- **SFX:** produces a Windows `.exe` or Linux `.run` containing the self-contained extractor plus an archive payload. It adds roughly the size of the published executable. Recipients need no LunaArc installation or external 7-Zip encoder, but the executable must match their OS/architecture and Linux GUI dependencies still apply. Running the GUI SFX shows the extraction options; it never launches extracted files. Use only executables from a trusted sender. The versioned footer validates offsets, format and SHA-256 payload integrity; the hash is not a publisher signature. On Linux, downloaded/copied executables may need `chmod +x`. Development builds disable SFX creation because their executable is not self-contained.
+- **Recovery:** keep `<archive>.lrec` with the exact archive it was generated from. **Tools > Repair archive using .lrec...** selects a damaged archive, verifies the companion, reconstructs content and saves to a **new path**, preserving the original. It can repair **one damaged or missing 1 MiB block per group of 16 blocks**, including a truncated final block, and verifies the final original SHA-256 hash. Two damaged blocks in the same group exceed capacity; insertion/deletion that shifts later bytes can also exceed capacity. The record costs about 6.25% plus block hashes and rounding (small archives need at least a 1 MiB parity block). Limits: 1,000,000 data blocks; repair uses about 17 MiB of block buffers plus up to 32 MiB of block hashes. Corrupt/truncated records are rejected. This is LunaArc's versioned sidecar format, not WinRAR/RAR recovery records or PAR2, and hashes do not authenticate the sender.
+- **Lock:** keep `<archive>.lunalock` beside the archive, including when renaming/moving it. The record stores a SHA-256 fingerprint and blocks LunaArc writers even if the archive itself was removed. **Tools > Unlock current archive** or `luna-cli unlock` explicitly removes it and clears read-only. Reading/extracting remains available. This is advisory protection in LunaArc, **not encryption or an access-control boundary**; other applications can clear attributes or remove companions. LunaArc creation always requires a new output name, including after unlocking.
+
+Recovery and lock companions are separate files; keep and distribute them with the archive. These features do not create RAR archives or modify existing ZIP/TAR/LARC layouts. SFX/recovery creation forces archive testing. Requested companions are prepared before completion; a failed creation preserves sources. Source deletion starts only after the completed output and requested companions are published.
+
+```text
+luna-cli pack-7z ./source -o ./archive.7z --solid on --recovery on --lock on
+luna-cli pack-zip ./source -o ./extractor.exe --sfx on
+luna-cli recovery-record ./archive.zip
+luna-cli repair ./archive.zip -o ./repaired.zip
+luna-cli unlock ./archive.zip
+luna-cli make-sfx ./archive.zip -o ./extractor.exe
+extractor.exe -o ./destination
+```
+
+`--sfx on` in pack commands embeds the GUI extractor. `make-sfx` uses the published CLI itself for a standalone command-line extractor; the last example applies to that CLI extractor. Use `.run` and `./extractor.run` on Linux. Pack options accept explicit `on` / `off` values. Existing destinations are never overwritten.
 
 ## Extract files
 
@@ -226,16 +247,16 @@ luna-cli register-shell
 luna-cli unregister-shell
 ```
 
-Quote paths containing spaces. Packing creates `<source>.larc` or `<source>.zip`. Extraction currently overwrites matching destination files by default; choose a separate destination when preserving existing files matters. `test` returns a nonzero exit code for an unhealthy archive. Unknown commands and incomplete arguments also fail.
+Quote paths containing spaces. Packing creates `<source>.larc`, `<source>.zip` or `<source>.7z`, or uses the explicit new path from `-o`. Extraction currently overwrites matching destination files by default; choose a separate destination when preserving existing files matters. `test` returns a nonzero exit code for an unhealthy archive. Unknown commands and incomplete arguments also fail.
 
 Shell registration is explicit and changes the current user's OS configuration. Run it from the published directory. Windows registers per-extension Explorer verbs through `SystemFileAssociations` and adds LunaArc as an Open With choice without changing existing defaults. It notifies Explorer after installation/removal. Linux registration creates a desktop launcher and Nautilus scripts under `XDG_DATA_HOME` (or `~/.local/share`); it does not automatically set default MIME associations or install Dolphin menus.
 
 ## Formats and current limitations
 
-- Create: `.larc`, `.zip`, `.tar.gz`. Studio exposes all three; CLI packing exposes .larc and ZIP.
+- Create: `.larc`, `.zip`, `.tar.gz`, `.7z`. Studio exposes all four; CLI packing exposes LARC, ZIP and 7z. Published GUI/CLI packages support SFX overlays and LunaArc recovery/lock companions.
 - Read/extract: native .larc; `.tar`, `.tar.gz` and `.tgz` through .NET; ZIP, RAR and 7z through SharpCompress. Other compressed inputs depend on SharpCompress's format detection and need representative fixtures before claiming support.
 - `.larc` stores a versioned magic header, compressed JSON metadata and per-file payloads. Optional passwords encrypt both metadata and data using AES-256-CBC with PBKDF2-SHA256. CRC32 detects accidental corruption; the format does not provide authenticated encryption.
-- ZIP and TAR GZip output do not support passwords. Unsupported encryption is rejected rather than silently ignored. `TarZst` remains in the API enum but creation is explicitly rejected.
+- ZIP, TAR GZip and 7z output do not support passwords. Unsupported encryption is rejected rather than silently ignored. `TarZst` remains in the API enum but creation is explicitly rejected.
 - Split-volume output exists for .larc/ZIP, but reading those split outputs is not implemented. Do not use it when an immediately readable archive is required.
 - File preview uses an isolated temporary session. Editing a preview does not update the original archive.
 - `.larc` currently buffers each file in memory. Large-file memory usage and speed claims require benchmarks.
@@ -248,12 +269,30 @@ Shell registration is explicit and changes the current user's OS configuration. 
 The current Windows checkout was checked with .NET SDK 8.0.426:
 
 - Debug and Release solution builds passed with zero warnings and zero errors.
-- 126 backend/archive smoke checks passed on Windows, including recovery, vault failures and Explorer command parsing.
+- Backend/archive checks include solid/non-solid 7z, SFX footer validation, recovery reconstruction/refusal, locks, vault failures and Explorer command parsing. See the latest successful CI run for current counts.
 - 57 isolated Registry checks verify cascading groups, command order/quoting, default applications, other applications' entries and scoped cleanup without changing Explorer configuration.
-- 45 rendered Studio checks passed, including recovery, vault operations, extraction options, Extract Here/folder behavior, preservation of existing files and cancelling compression/extraction dialogs.
-- The version 1.2 `win-x64` self-contained publish succeeded and its CLI help ran successfully.
+- 92 rendered Studio checks passed locally, including General option bindings, 7z creation, recovery/lock companions, explicit unlock and exact-hash repair.
+- The version 1.4.0 `win-x64` managed-only self-contained publish succeeded. Published ZIP/LARC/7z CLI SFX files ran independently; recovery and lock/unlock checks passed. Complete Windows setup/menu packaging is verified separately by CI.
 - Native Linux build, backend checks, rendered UI checks and publish passed in CI for the recovery implementation commit `2f90420`. This Windows machine does not establish native Linux desktop behavior; OS file-picker dialogs and full desktop interaction remain outside the headless checks.
 
 CI results belong to the specific commit/run; review the Actions tab before downloading an artifact.
 
 Build artifacts (`bin`, `obj`, `dist`, `.tools`) and local task notes (`task`) are excluded from version control. Project guidance is in [AGENT.md](AGENT.md).
+
+### Advanced feature verification
+
+Before running smoke/UI checks from source, prepare the pinned encoder. On Windows:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File installers/prepare_sevenzip.ps1 -OutputDirectory .tools/check-encoder
+$env:LUNAARC_7ZIP_PATH = (Resolve-Path .tools/check-encoder/LunaArc.7zr.exe).Path
+```
+
+On Linux:
+
+```bash
+bash installers/prepare_sevenzip.sh "$PWD/.tools/check-encoder"
+export LUNAARC_7ZIP_PATH="$PWD/.tools/check-encoder/LunaArc.7zz"
+```
+
+The Linux preparation script requires curl, sha256sum and tar with xz support. Windows PowerShell preparation also supports `-Runtime linux-x64` for cross-publishing (tar required). Publish scripts include the encoder and notices automatically; ordinary runtime use requires no download. The advanced smoke checks verify parity recovery/refusal, footer corruption, locks, safe failures and independently confirmed solid/non-solid 7z. `python installers/test_advanced_packages.py dist/win-x64` (or `dist/linux-x64`) executes actual published standalone CLI SFX files without a neighboring LunaArc installation. CI runs these natively on Windows and Linux; it does not automate the OS-level GUI SFX dialog.

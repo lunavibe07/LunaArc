@@ -43,7 +43,8 @@ public enum OutputArchiveFormat
     LarcNative,
     Zip,            // .zip
     TarGz,          // .tar.gz
-    TarZst          // .tar.zst
+    TarZst,         // .tar.zst
+    SevenZip       // .7z; external pinned 7-Zip encoder, managed decoding
 }
 
 public sealed class ExtractOptions
@@ -65,7 +66,7 @@ public sealed class CompressOptions
     public LunaCompressionLevel Level { get; init; } = LunaCompressionLevel.Normal;
     public string? Password { get; init; }
     public bool EncryptHeader { get; init; } = false;
-    public bool SolidArchive { get; init; } = true;
+    public bool SolidArchive { get; init; } = false;
     public bool DeleteSourceAfterArchiving { get; init; } = false;
     public long? SplitVolumeSizeBytes { get; init; } = null;
     public string? ArchiveComment { get; init; }

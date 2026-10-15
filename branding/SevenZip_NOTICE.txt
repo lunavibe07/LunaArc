@@ -1,0 +1,16 @@
+LunaArc packages the unmodified 7-Zip 26.04 command-line encoder.
+Copyright (C) 1999-2026 Igor Pavlov.
+
+Windows: 7zr.exe (renamed LunaArc.7zr.exe).
+Linux x64: 7zz (renamed LunaArc.7zz).
+This is a separate executable; LunaArc does not link it into its assemblies.
+The encoder can be replaced using the LUNAARC_7ZIP_PATH environment variable.
+
+7-Zip home: https://www.7-zip.org/
+Exact release and corresponding source:
+https://github.com/ip7z/7zip/releases/tag/26.04
+https://github.com/ip7z/7zip/releases/download/26.04/7z2604-src.tar.xz
+Source SHA-256: 9691944c0fe0d01bb49373a704fb983fd33bc98b1738695179dfbf99ac1734f6
+
+See SevenZip_LICENSE.txt for component notices and SevenZip_COPYING.txt for
+the GNU LGPL 2.1. LunaArc creates 7z archives, not RAR archives.

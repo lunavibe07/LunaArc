@@ -28,7 +28,9 @@ Current dependencies: SharpCompress 0.50.5, ZstdSharp.Port 0.8.1, Avalonia 11.1.
 - `StandardArchiveHandler` is shared by CLI and Studio. Standard TAR/TAR GZip processing uses `TarArchiveHandler` and .NET TAR APIs; other standard formats use SharpCompress.
 - `.larc` contains magic `LUNAARC\x01`, flags, compressed JSON metadata and individual payloads. It is not a TAR wrapper. Passwords currently encrypt both header and payload.
 - .larc creation buffers whole files. The 64 KiB streaming pipeline does not establish bounded memory for every format.
-- ZIP/TAR GZip output reject passwords; `TarZst` creation is unsupported and fails explicitly. Contract options such as `EncryptHeader` and `SolidArchive` are not proof of implemented independent behavior.
+- ZIP/TAR GZip output reject passwords; `TarZst` creation is unsupported and fails explicitly. `EncryptHeader` is not an independent behavior. Solid compression is supported only for new 7z output, through a separate pinned 7-Zip 26.04 encoder.
+- SFX v1 uses a self-contained published GUI/CLI executable plus a bounded, SHA-256 checked archive overlay. It targets the current OS/architecture and never auto-runs extracted files. LARC v1 remains unchanged.
+- `.lrec` recovery v1 is a separate bounded block-map/XOR-parity format, not RAR or PAR2: one damaged 1 MiB block per group of 16. Repair verifies the full original hash and writes a new output. `.lunalock` is an advisory companion plus read-only attribute, not encryption or an access-control boundary. Preserve companions and explicit unlock semantics.
 - Multi-volume output exists, but reading split outputs is not implemented.
 - Preview files are extracted into a validated session directory. Watcher notifications do not imply saving edits back to archives.
 - `PasswordVault` uses a versioned AES-256-GCM envelope and PBKDF2-SHA256 (600,000 iterations). Never persist the master password or include secrets in logs. Legacy plaintext JSON is not imported or deleted automatically.
@@ -61,7 +63,7 @@ Current dependencies: SharpCompress 0.50.5, ZstdSharp.Port 0.8.1, Avalonia 11.1.
 - Avoid whole-file buffering in new large-file paths. Validate lengths, offsets, overflow and allocation limits before trusting archive metadata.
 - Preserve VFS parent/child relationships, full paths, metadata and root detection. Archive paths are case-sensitive, even on a case-insensitive host.
 - Keep Studio state/commands in ViewModels and layout/bindings in XAML. Run archive work off the UI thread and dispatch progress/watcher notifications to the UI thread.
-- Studio uses a light classic desktop layout with menu/toolbar/path/DataGrid/status bar. Keep unsupported archive editing/repair actions out of the toolbar. Compression/password/comment options live in a modal dialog; cancellation restores prior values. Preserve numeric size sorting and current-folder name filtering.
+- Studio uses a light classic desktop layout with menu/toolbar/path/DataGrid/status bar. Keep unsupported archive editing actions out of the toolbar; recovery-record repair and lock/unlock are available under Tools. Compression/password/comment options live in a modal dialog; cancellation restores prior values. Preserve numeric size sorting and current-folder name filtering.
 - Prevent overlapping jobs; verify busy, error, cancel and selection/navigation behavior. Check generated commands and bindings when changing XAML.
 
 ## Archive and filesystem rules

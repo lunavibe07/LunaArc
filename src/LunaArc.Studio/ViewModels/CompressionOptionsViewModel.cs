@@ -12,6 +12,13 @@ public partial class CompressionOptionsViewModel : ObservableObject
     [ObservableProperty] private string _passwordInput = string.Empty;
     [ObservableProperty] private string _archiveComment = string.Empty;
     [ObservableProperty] private bool _testCreatedArchive;
+    [ObservableProperty] private bool _createSfx;
+    [ObservableProperty] private bool _solidArchive;
+    [ObservableProperty] private bool _addRecoveryRecord;
+    [ObservableProperty] private bool _lockArchive;
+    public bool CanCreateSfx => IsCreation && LunaArc.Core.Formats.SfxArchive.CanCreate;
+    public bool CanUseSolid => IsSevenZip;
+    public bool IsSevenZip { get => SelectedFormatIndex == 3; set { if (value) SelectedFormatIndex = 3; } }
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanToggleTest))]
     private bool _deleteSourceAfterArchiving;
@@ -21,6 +28,8 @@ public partial class CompressionOptionsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsLarc))]
     [NotifyPropertyChangedFor(nameof(IsZip))]
     [NotifyPropertyChangedFor(nameof(IsTarGzip))]
+    [NotifyPropertyChangedFor(nameof(IsSevenZip))]
+    [NotifyPropertyChangedFor(nameof(CanUseSolid))]
     [NotifyPropertyChangedFor(nameof(FormatNote))]
     [NotifyPropertyChangedFor(nameof(CanComment))]
     private int _selectedFormatIndex;
@@ -28,10 +37,12 @@ public partial class CompressionOptionsViewModel : ObservableObject
     public bool IsLarc { get => SelectedFormatIndex == 0; set { if (value) SelectedFormatIndex = 0; } }
     public bool IsZip { get => SelectedFormatIndex == 1; set { if (value) SelectedFormatIndex = 1; } }
     public bool IsTarGzip { get => SelectedFormatIndex == 2; set { if (value) SelectedFormatIndex = 2; } }
-    public bool CanComment => SelectedFormatIndex != 2;
-    public string Extension => SelectedFormatIndex switch { 1 => ".zip", 2 => ".tar.gz", _ => ".larc" };
+    public bool CanComment => SelectedFormatIndex is 0 or 1;
+    public string Extension => CreateSfx ? (OperatingSystem.IsWindows() ? ".exe" : ".run") : PayloadExtension;
+    private string PayloadExtension => SelectedFormatIndex switch { 1 => ".zip", 2 => ".tar.gz", 3 => ".7z", _ => ".larc" };
     public string FormatNote => IsLarc ? "LARC supports password encryption of names and contents."
         : IsZip ? "ZIP output supports comments. Password encryption is available with LARC."
+        : IsSevenZip ? "7z supports solid LZMA2 compression. Encoding needs the packaged 7-Zip tool and staging space. Pause applies before/after encoding; Cancel stops it."
         : "TAR GZip output supports compression; passwords and comments require another format.";
     public string PasswordSummary => PasswordInput.Length == 0 ? "No password set" : "Password set";
 
@@ -44,6 +55,7 @@ public partial class CompressionOptionsViewModel : ObservableObject
         PasswordInput = settings.PasswordInput;
         ArchiveComment = settings.ArchiveComment;
         TestCreatedArchive = settings.TestCreatedArchive;
+        SolidArchive = settings.SolidArchive && IsSevenZip;
         string parent = (IsCreation ? Path.GetDirectoryName(Path.GetFullPath(SourcePaths[0])) : null)
             ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string name = IsCreation && SourcePaths.Count == 1 ? LunaArc.Shell.ExplorerRequest.GetFolderName(SourcePaths[0]) : "Archive";
@@ -53,6 +65,7 @@ public partial class CompressionOptionsViewModel : ObservableObject
         ArchiveName = path;
     }
     partial void OnArchiveNameChanged(string value) => Status = string.Empty;
+    partial void OnCreateSfxChanged(bool value) => UpdateExtension();
     partial void OnDeleteSourceAfterArchivingChanged(bool value)
     {
         if (value) TestCreatedArchive = true;
@@ -65,9 +78,14 @@ public partial class CompressionOptionsViewModel : ObservableObject
     }
     partial void OnSelectedFormatIndexChanged(int value)
     {
+        if (value != 3) SolidArchive = false;
+        UpdateExtension();
+    }
+    private void UpdateExtension()
+    {
         if (ArchiveName.Length == 0) return;
         string name = ArchiveName;
-        foreach (string extension in new[] { ".tar.gz", ".larc", ".zip" })
+        foreach (string extension in new[] { ".tar.gz", ".larc", ".zip", ".7z", ".exe", ".run" })
             if (name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) { name = name[..^extension.Length]; break; }
         ArchiveName = name + Extension;
         Status = string.Empty;
@@ -77,10 +95,13 @@ public partial class CompressionOptionsViewModel : ObservableObject
     {
         try
         {
-            if (SelectedFormatIndex is < 0 or > 2 || SelectedLevelIndex is < 0 or > 5)
+            if (SelectedFormatIndex is < 0 or > 3 || SelectedLevelIndex is < 0 or > 5)
                 throw new ArgumentException("Choose a supported format and compression method.");
             if (!IsLarc && PasswordInput.Length > 0) throw new ArgumentException("Choose LARC for encryption, or clear the password using Set password.");
-            if (!CanComment && ArchiveComment.Length > 0) throw new ArgumentException("TAR GZip does not support archive comments. Clear the comment or choose LARC / ZIP.");
+            if (!CanComment && ArchiveComment.Length > 0) throw new ArgumentException("This format does not support archive comments. Clear the comment or choose LARC / ZIP.");
+            if (SolidArchive && !IsSevenZip) throw new ArgumentException("Select 7z for solid compression.");
+            if (IsSevenZip && !LunaArc.Core.Formats.SevenZipEncoder.IsAvailable) throw new ArgumentException("The 7-Zip encoder is missing. Use a published LunaArc package.");
+            if (CreateSfx && !CanCreateSfx) throw new ArgumentException("SFX creation requires a published self-contained LunaArc package.");
             if (System.Text.Encoding.UTF8.GetByteCount(ArchiveComment) > 65535) throw new ArgumentException("The archive comment must fit within 65,535 UTF-8 bytes.");
             if (IsCreation)
             {
@@ -120,5 +141,9 @@ public partial class CompressionOptionsViewModel : ObservableObject
         settings.ArchiveComment = ArchiveComment;
         settings.TestCreatedArchive = TestCreatedArchive;
         settings.DeleteSourceAfterArchiving = IsCreation && DeleteSourceAfterArchiving;
+        settings.CreateSfx = IsCreation && CreateSfx;
+        settings.SolidArchive = SolidArchive;
+        settings.AddRecoveryRecord = IsCreation && AddRecoveryRecord;
+        settings.LockArchive = IsCreation && LockArchive;
     }
 }

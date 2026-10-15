@@ -27,6 +27,7 @@
           <RadioButton Name="LarcFormatRadio" GroupName="Format" Content="LARC (.larc)" IsChecked="{Binding IsLarc}"/>
           <RadioButton Name="ZipFormatRadio" GroupName="Format" Content="ZIP (.zip)" IsChecked="{Binding IsZip}"/>
           <RadioButton Name="TarFormatRadio" GroupName="Format" Content="TAR GZip (.tar.gz)" IsChecked="{Binding IsTarGzip}"/>
+          <RadioButton Name="SevenZipFormatRadio" GroupName="Format" Content="7z (.7z)" IsChecked="{Binding IsSevenZip}"/>
          </StackPanel>
         </Border>
         <StackPanel Spacing="5">
@@ -49,12 +50,12 @@
          <StackPanel>
           <TextBlock Text="Archiving options" FontWeight="SemiBold" Margin="0,0,0,4"/>
           <CheckBox Name="DeleteSourceAfterArchivingBox" Content="Delete files after archiving" IsChecked="{Binding DeleteSourceAfterArchiving}" IsEnabled="{Binding IsCreation}" ToolTip.Tip="Requires archive and source-content verification. Applies to this creation only."/>
-          <CheckBox Name="CreateSfxBox" Content="Create SFX archive" IsEnabled="False" ToolTip.Tip="Not supported in this version."/>
-          <CheckBox Name="CreateSolidBox" Content="Create solid archive" IsEnabled="False" ToolTip.Tip="Not supported in this version."/>
-          <CheckBox Name="RecoveryRecordBox" Content="Add recovery record" IsEnabled="False" ToolTip.Tip="Not supported in this version."/>
+          <CheckBox Name="CreateSfxBox" Content="Create SFX archive" IsChecked="{Binding CreateSfx}" IsEnabled="{Binding CanCreateSfx}" ToolTip.Tip="Self-contained extractor for the current OS/architecture. Available in published packages. Adds the LunaArc executable size."/>
+          <CheckBox Name="CreateSolidBox" Content="Create solid archive" IsChecked="{Binding SolidArchive}" IsEnabled="{Binding CanUseSolid}" ToolTip.Tip="Select 7z. Compresses files together using LZMA2."/>
+          <CheckBox Name="RecoveryRecordBox" Content="Add recovery record" IsChecked="{Binding AddRecoveryRecord}" IsEnabled="{Binding IsCreation}" ToolTip.Tip="Creates a .lrec companion. Repairs one damaged 1 MiB block per group of 16 blocks. Keep it beside the archive."/>
           <CheckBox Name="TestCreatedArchiveBox" Content="Test archived files" IsChecked="{Binding TestCreatedArchive}" IsEnabled="{Binding CanToggleTest}" ToolTip.Tip="Testing is required when deleting source files."/>
-          <CheckBox Name="LockArchiveBox" Content="Lock archive" IsEnabled="False" ToolTip.Tip="Not supported in this version."/>
-          <TextBlock Text="Unsupported: SFX, solid, recovery record, archive lock." TextWrapping="Wrap" Foreground="#BDBDBD" FontSize="11" Margin="0,6,0,0"/>
+          <CheckBox Name="LockArchiveBox" Content="Lock archive" IsChecked="{Binding LockArchive}" IsEnabled="{Binding IsCreation}" ToolTip.Tip="Creates a .lunalock companion and marks the archive read-only. Advisory protection in LunaArc, not encryption. Unlock using Tools."/>
+          <TextBlock Text="Solid: 7z only. SFX: published package, current OS. Keep .lrec / .lunalock companions. These are LunaArc features, not RAR records." TextWrapping="Wrap" Foreground="#BDBDBD" FontSize="11" Margin="0,6,0,0"/>
          </StackPanel>
         </Border>
         <Button Name="SetArchivePasswordButton" Content="Set password..." HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnSetPassword"/>

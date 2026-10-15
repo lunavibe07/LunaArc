@@ -48,6 +48,9 @@
                     <MenuItem Header="Archive _information" Click="OnInfoClicked" IsEnabled="{Binding HasArchive}" />
                 </MenuItem>
                 <MenuItem Header="_Tools">
+                    <MenuItem Name="RepairArchiveMenu" Header="Repair archive using .lrec..." Click="OnRepairArchiveClicked" IsEnabled="{Binding CanStartOperation}"/>
+                    <MenuItem Name="LockArchiveMenu" Header="Lock current archive" Click="OnLockArchiveClicked" IsEnabled="{Binding CanUseArchive}"/>
+                    <MenuItem Name="UnlockArchiveMenu" Header="Unlock current archive" Click="OnUnlockArchiveClicked" IsEnabled="{Binding CanUseArchive}"/>
                     <MenuItem Name="RecoverPasswordMenu" Header="_Recover password..." Click="OnRecoverPasswordClicked" />
                     <MenuItem Header="Install Explorer context _menu" Command="{Binding RegisterOsShellMenuCommand}" />
                 </MenuItem>

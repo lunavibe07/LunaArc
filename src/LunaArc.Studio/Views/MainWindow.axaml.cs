@@ -19,6 +19,45 @@ public partial class MainWindow : Window
 
     private MainWindowViewModel? Vm => DataContext as MainWindowViewModel;
 
+    public async Task OpenSelfExtractingArchiveAsync(string executable)
+    {
+        if (Vm == null) return;
+        string destination = Path.Combine(Path.GetDirectoryName(executable)!, Path.GetFileNameWithoutExtension(executable) + "-extracted");
+        var choice = await new ExtractOptionsWindow(destination).ShowDialog<ExtractionChoice?>(this);
+        if (choice != null && await Vm.OpenArchiveFileAsync(executable, choice.Password.Length > 0 ? choice.Password : null))
+            await RunExtractionAsync(choice);
+    }
+
+    private async void OnRepairArchiveClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || Vm.IsBusy) return;
+        try
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Select damaged archive (keep its .lrec companion beside it)", AllowMultiple = false });
+            string? source = files.FirstOrDefault()?.TryGetLocalPath();
+            if (source == null) return;
+            var output = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = "Save repaired archive to a new file", SuggestedFileName = "repaired-" + Path.GetFileName(source) });
+            if (output?.TryGetLocalPath() is { } target) await Vm.RepairArchiveAsync(source, target);
+        }
+        catch (Exception ex) { Vm.StatusMessage = "Could not repair archive: " + ex.Message; }
+    }
+
+    private async void OnLockArchiveClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || !Vm.CanUseArchive) return;
+        Vm.IsBusy = true;
+        try { await Task.Run(() => LunaArc.Core.Security.ArchiveLock.LockAsync(Vm.CurrentArchivePath)); Vm.StatusMessage = "Archive locked. Keep its .lunalock companion. This is advisory protection, not encryption."; }
+        catch (Exception ex) { Vm.StatusMessage = "Could not lock archive: " + ex.Message; }
+        finally { Vm.IsBusy = false; }
+    }
+
+    private void OnUnlockArchiveClicked(object? sender, RoutedEventArgs e)
+    {
+        if (Vm == null || !Vm.CanUseArchive) return;
+        try { LunaArc.Core.Security.ArchiveLock.Unlock(Vm.CurrentArchivePath); Vm.StatusMessage = "Archive unlocked."; }
+        catch (Exception ex) { Vm.StatusMessage = "Could not unlock archive: " + ex.Message; }
+    }
+
     public async Task HandleExplorerRequestAsync(ExplorerRequest request)
     {
         if (Vm == null || Vm.IsBusy) return;

@@ -29,7 +29,9 @@ public partial class App : Application
             {
                 try
                 {
-                    if (desktop.Args is { Length: > 0 } args && args[0].StartsWith("--shell-", StringComparison.Ordinal))
+                    if (Environment.ProcessPath is { } self && LunaArc.Core.Formats.SfxArchive.IsSfx(self))
+                        await window.OpenSelfExtractingArchiveAsync(self);
+                    else if (desktop.Args is { Length: > 0 } args && args[0].StartsWith("--shell-", StringComparison.Ordinal))
                         await window.HandleExplorerRequestAsync(ExplorerRequest.Parse(args));
                     else if (desktop.Args is { Length: 1 } && File.Exists(desktop.Args[0]))
                         await vm.OpenArchiveFileAsync(desktop.Args[0]);

@@ -103,8 +103,16 @@ internal static class Program
             Dispatcher.UIThread.RunJobs();
             var zipOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
             Check(zipOptions.FindControl<CheckBox>("DeleteSourceAfterArchivingBox")!.IsChecked == false, "Source deletion defaults off for every creation");
-            Check(new[] { "CreateSfxBox", "CreateSolidBox", "RecoveryRecordBox", "LockArchiveBox" }.All(name =>
-                zipOptions.FindControl<CheckBox>(name) is { IsEnabled: false, IsChecked: false }), "Unsupported WinRAR-style options are visible, disabled and unchecked");
+            Check(new[] { "RecoveryRecordBox", "LockArchiveBox" }.All(name =>
+                zipOptions.FindControl<CheckBox>(name) is { IsEnabled: true, IsChecked: false }), "Recovery and lock are enabled and default off");
+            Check(!zipOptions.FindControl<CheckBox>("CreateSolidBox")!.IsEnabled && !zipOptions.FindControl<CheckBox>("CreateSfxBox")!.IsEnabled,
+                "ZIP disables solid; development builds require published SFX stub");
+            zipOptions.Options.IsSevenZip = true;
+            Check(zipOptions.FindControl<CheckBox>("CreateSolidBox")!.IsEnabled, "Selecting 7z enables solid compression");
+            zipOptions.Options.SolidArchive = true;
+            Capture(zipOptions, "compression-solid.png");
+            zipOptions.Options.IsZip = true;
+            Check(!zipOptions.Options.SolidArchive, "Leaving 7z clears solid compression");
             Check(zipOptions.Options.IsZip && zipOptions.FindControl<TextBox>("ArchiveNameBox")!.IsEnabled, "Explorer Add ZIP opens General with an editable output name");
             zipOptions.Options.ArchiveName = archivePath;
             Click(zipOptions.FindControl<Button>("AcceptOptionsButton")!);
@@ -114,6 +122,8 @@ internal static class Program
             zipOptions.FindControl<ComboBox>("LevelPicker")!.SelectedIndex = 5;
             zipOptions.FindControl<CheckBox>("TestCreatedArchiveBox")!.IsChecked = true;
             zipOptions.Options.ArchiveComment = "Synthetic General comment";
+            zipOptions.Options.AddRecoveryRecord = true;
+            zipOptions.Options.LockArchive = true;
             Capture(zipOptions, "compression-general.png");
             zipOptions.Width = 600; zipOptions.Height = 670;
             Capture(zipOptions, "compression-compact.png");
@@ -121,6 +131,9 @@ internal static class Program
             Click(zipOptions.FindControl<Button>("AcceptOptionsButton")!);
             Pump(createZip);
             Check(File.Exists(zipOutput) && vm.StatusMessage.Contains("verified"), "General creates and verifies the selected ZIP output");
+            Check(File.Exists(zipOutput + ".lrec") && LunaArc.Core.Security.ArchiveLock.IsLocked(zipOutput), "General creates recovery and lock companions");
+            window.FindControl<MenuItem>("UnlockArchiveMenu")!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Check(!LunaArc.Core.Security.ArchiveLock.IsLocked(zipOutput), "Tools explicitly unlocks the current archive");
             using (var createdZip = ZipFile.OpenRead(zipOutput))
             using (var reader = new StreamReader(createdZip.Entries.Single().Open()))
                 Check(reader.ReadToEnd() == "Synthetic compression dialog fixture" && createdZip.Comment == "Synthetic General comment", "Independent ZIP reader verifies content and comment from General");
@@ -158,6 +171,27 @@ internal static class Program
             Check(File.Exists(larcOutput) && vm.HasArchive && vm.CurrentArchivePath == larcOutput && vm.StatusMessage.Contains("verified"), "General creates, verifies and opens an encrypted LARC");
             Check(larcOptions.Options.PasswordInput.Length == 0, "Closing General clears its draft password");
             vm.PasswordInput = string.Empty;
+
+            Task solidCreation = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Add, compressionSource));
+            Dispatcher.UIThread.RunJobs();
+            var solidOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
+            solidOptions.Options.IsSevenZip = true;
+            solidOptions.Options.ArchiveComment = string.Empty;
+            solidOptions.Options.SolidArchive = true;
+            string solidOutput = solidOptions.OutputPath;
+            Click(solidOptions.FindControl<Button>("AcceptOptionsButton")!);
+            Pump(solidCreation);
+            Check(File.Exists(solidOutput) && vm.HasArchive && vm.CurrentArchivePath == solidOutput, "General creates and opens 7z output");
+            Check(!vm.CreateSfx && !vm.AddRecoveryRecord && !vm.LockArchive, "Creation companions are one-operation settings");
+
+            string damagedForUi = Path.Combine(temporary, "damaged-ui.zip");
+            File.Copy(zipOutput, damagedForUi);
+            File.Copy(zipOutput + ".lrec", damagedForUi + ".lrec");
+            using (var damagedBytes = new FileStream(damagedForUi, FileMode.Open, FileAccess.Write)) damagedBytes.WriteByte(0xff);
+            string repairedForUi = Path.Combine(temporary, "repaired-ui.zip");
+            Pump(vm.RepairArchiveAsync(damagedForUi, repairedForUi));
+            Check(File.ReadAllBytes(repairedForUi).SequenceEqual(File.ReadAllBytes(zipOutput)) && vm.StatusMessage.Contains("SHA-256 verified") && !vm.IsBusy,
+                "Repair flow reconstructs exact contents and restores idle state");
 
             string deleteSource = Path.Combine(temporary, "delete source.txt");
             File.WriteAllText(deleteSource, "Synthetic opt-in deletion fixture");

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using LunaArc.Core.Contracts;
 using LunaArc.Core.Formats;
 using LunaArc.Core.Pipeline;
+using LunaArc.Core.Security;
 using LunaArc.Shell;
 
 namespace LunaArc.Cli;
@@ -14,6 +15,9 @@ public static class Program
     public static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        if (Environment.ProcessPath is { } self && SfxArchive.IsSfx(self))
+            return await RunSfxAsync(self, args);
 
         if (args.Length == 0 || args[0] is "help" or "--help" or "-h")
         {
@@ -28,7 +32,7 @@ public static class Program
 
         try
         {
-            string[] archiveCommands = { "list", "l", "extract-here", "x", "extract-smart", "extract-folder", "pack-larc", "pack-zip", "test", "t" };
+            string[] archiveCommands = { "list", "l", "extract-here", "x", "extract-smart", "extract-folder", "pack-larc", "pack-zip", "pack-7z", "make-sfx", "recovery-record", "repair", "lock", "unlock", "test", "t" };
             bool scopedUnregister = command == "unregister-shell" && args.Length == 3 && args[1] == "--if-path";
             if (command is "register-shell" or "unregister-shell" && args.Length != 1 && !scopedUnregister)
                 throw new ArgumentException($"Command '{command}' takes no arguments.");
@@ -36,11 +40,14 @@ public static class Program
                 throw new ArgumentException($"Command '{command}' requires a file or directory path.");
             for (int i = 2; !scopedUnregister && i < args.Length; i += 2)
             {
-                if (args[i] is not ("-p" or "-o") || i + 1 >= args.Length)
-                    throw new ArgumentException("Options must be -p <password> or -o <directory>.");
-                if (args[i] == "-o" && command is not ("extract-here" or "x"))
-                    throw new ArgumentException("The -o option is supported by extract-here only.");
-                if (args[i] == "-p" && command == "pack-zip")
+                if (args[i] is not ("-p" or "-o" or "--solid" or "--sfx" or "--recovery" or "--lock") || i + 1 >= args.Length)
+                    throw new ArgumentException("Options require values: -p <password>, -o <output>, --solid/--sfx/--recovery/--lock <on|off>.");
+                if (args[i] == "-o" && command is not ("extract-here" or "x" or "pack-larc" or "pack-zip" or "pack-7z" or "make-sfx" or "repair"))
+                    throw new ArgumentException("This command does not accept an output option.");
+                if (args[i].StartsWith("--", StringComparison.Ordinal) &&
+                    (!command.StartsWith("pack-", StringComparison.Ordinal) || args[i + 1] is not ("on" or "off")))
+                    throw new ArgumentException("Archiving flags require a pack command and an on/off value.");
+                if (args[i] == "-p" && command is "pack-zip" or "pack-7z")
                     throw new NotSupportedException("ZIP output does not support passwords. Use pack-larc instead.");
             }
             switch (command)
@@ -99,47 +106,52 @@ public static class Program
                     break;
                 }
 
-                case "pack-larc":
+                case "pack-larc" or "pack-zip" or "pack-7z":
                 {
-                    string sourcePath = Path.GetFullPath(args[1]);
-                    string outputArchive = sourcePath + ".larc";
-                    string? pwd = GetOptionValue(args, "-p");
-
-                    await backend.CompressAsync(
-                        new[] { sourcePath },
-                        new CompressOptions
-                        {
-                            OutputArchivePath = outputArchive,
-                            Format = OutputArchiveFormat.LarcNative,
-                            Level = LunaCompressionLevel.Normal,
-                            Password = pwd
-                        },
-                        controller,
-                        (done, total, file) => Console.Write($"\r🌙 Creating .larc: [{done * 100 / Math.Max(1, total),3}%] {file,-40}"));
-
-                    Console.WriteLine($"\n✅ Created archive: {outputArchive}");
+                    string source = Path.GetFullPath(args[1]);
+                    var format = command == "pack-zip" ? OutputArchiveFormat.Zip : command == "pack-7z" ? OutputArchiveFormat.SevenZip : OutputArchiveFormat.LarcNative;
+                    bool sfx = GetOptionValue(args, "--sfx") == "on";
+                    string extension = sfx ? (OperatingSystem.IsWindows() ? ".exe" : ".run") : format == OutputArchiveFormat.Zip ? ".zip" : format == OutputArchiveFormat.SevenZip ? ".7z" : ".larc";
+                    string output = GetOptionValue(args, "-o") ?? source + extension;
+                    string result = await ArchiveCreationService.CreateAsync(new[] { source }, new CompressOptions
+                    {
+                        OutputArchivePath = output, Format = format, Password = GetOptionValue(args, "-p"),
+                        SolidArchive = GetOptionValue(args, "--solid") == "on"
+                    }, controller, sfx, GetOptionValue(args, "--recovery") == "on", GetOptionValue(args, "--lock") == "on", test: true);
+                    Console.WriteLine(result + " " + Path.GetFullPath(output));
                     break;
                 }
-
-                case "pack-zip":
+                case "make-sfx":
                 {
-                    string sourcePath = Path.GetFullPath(args[1]);
-                    string outputArchive = sourcePath + ".zip";
-
-                    await backend.CompressAsync(
-                        new[] { sourcePath },
-                        new CompressOptions
-                        {
-                            OutputArchivePath = outputArchive,
-                            Format = OutputArchiveFormat.Zip,
-                            Level = LunaCompressionLevel.Normal
-                        },
-                        controller,
-                        (done, total, file) => Console.Write($"\r🌙 Creating .zip: [{done * 100 / Math.Max(1, total),3}%] {file,-40}"));
-
-                    Console.WriteLine($"\n✅ Created archive: {outputArchive}");
+                    if (!SfxArchive.IsBundledProcess) throw new NotSupportedException("Use the published self-contained CLI to create a standalone extractor.");
+                    string archive = Path.GetFullPath(args[1]);
+                    string output = GetOptionValue(args, "-o") ?? throw new ArgumentException("Specify -o <new executable>.");
+                    var format = archive.EndsWith(".larc", StringComparison.OrdinalIgnoreCase) ? OutputArchiveFormat.LarcNative
+                        : archive.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) ? OutputArchiveFormat.TarGz
+                        : archive.EndsWith(".7z", StringComparison.OrdinalIgnoreCase) ? OutputArchiveFormat.SevenZip : OutputArchiveFormat.Zip;
+                    if (!(await backend.TestArchiveAsync(archive, GetOptionValue(args, "-p"), controller)).IsHealthy) throw new InvalidDataException("Archive verification failed.");
+                    ArchiveLock.EnsureWritable(output);
+                    await SfxArchive.CreateAsync(Environment.ProcessPath!, archive, output, format, controller.Token);
+                    Console.WriteLine("Created standalone command-line extractor: " + output);
                     break;
                 }
+                case "recovery-record":
+                    await ArchiveRecoveryRecord.CreateAsync(args[1], ArchiveRecoveryRecord.RecordPath(args[1]), controller);
+                    Console.WriteLine("Created recovery record: " + ArchiveRecoveryRecord.RecordPath(args[1]));
+                    break;
+                case "repair":
+                    await ArchiveRecoveryRecord.RepairAsync(args[1], ArchiveRecoveryRecord.RecordPath(args[1]),
+                        GetOptionValue(args, "-o") ?? throw new ArgumentException("Specify -o <new repaired archive>."), controller);
+                    Console.WriteLine("Archive recovered and SHA-256 verified. The original was preserved.");
+                    break;
+                case "lock":
+                    await ArchiveLock.LockAsync(args[1], controller.Token);
+                    Console.WriteLine("Archive locked (advisory LunaArc protection). Keep its .lunalock companion.");
+                    break;
+                case "unlock":
+                    ArchiveLock.Unlock(args[1]);
+                    Console.WriteLine("Archive unlocked.");
+                    break;
 
                 case "test" or "t":
                 {
@@ -204,6 +216,29 @@ public static class Program
         }
     }
 
+    private static async Task<int> RunSfxAsync(string self, string[] args)
+    {
+        try
+        {
+            if (args.Length == 0 || args[0] is "help" or "--help")
+            {
+                Console.WriteLine("LunaArc standalone extractor. Usage: <this executable> -o <destination> [-p password]. Existing files are skipped; extracted files are never launched.");
+                return 0;
+            }
+            for (int i = 0; i < args.Length; i += 2)
+                if (args[i] is not ("-o" or "-p") || i + 1 >= args.Length) throw new ArgumentException("Use -o <destination> [-p password].");
+            string destination = GetOptionValue(args, "-o") ?? throw new ArgumentException("Choose -o <destination>.");
+            using var job = new LunaJobController();
+            var backend = new StandardArchiveHandler();
+            string? password = GetOptionValue(args, "-p");
+            if (!(await backend.TestArchiveAsync(self, password, job)).IsHealthy) throw new InvalidDataException("Payload verification failed.");
+            await backend.ExtractAsync(self, new ExtractOptions { DestinationDirectory = Path.GetFullPath(destination), Password = password, OverwriteMode = OverwriteMode.SkipExisting }, job);
+            Console.WriteLine("Extracted to " + Path.GetFullPath(destination));
+            return 0;
+        }
+        catch (Exception ex) { Console.Error.WriteLine("SFX extraction failed: " + ex.Message); return 1; }
+    }
+
     private static string? GetOptionValue(string[] args, string flag)
     {
         for (int i = 0; i < args.Length - 1; i++)
@@ -234,6 +269,12 @@ public static class Program
         Console.WriteLine("  luna-cli extract-folder <archive> [-p password]: Always extract into an archive-named folder");
         Console.WriteLine("  luna-cli pack-larc <source> [-p password]       : Create a .larc archive");
         Console.WriteLine("  luna-cli pack-zip <source>          : Create a ZIP archive");
+        Console.WriteLine("  luna-cli pack-7z <source> [-o archive.7z] [--solid on] : Create 7z output");
+        Console.WriteLine("  Pack commands also accept --sfx on, --recovery on, --lock on and -o <new output>.");
+        Console.WriteLine("  luna-cli make-sfx <archive> -o <new executable> : Published CLI only; standalone extractor");
+        Console.WriteLine("  luna-cli recovery-record <archive>             : Create a .lrec companion");
+        Console.WriteLine("  luna-cli repair <archive> -o <new archive>      : Repair using its .lrec companion");
+        Console.WriteLine("  luna-cli lock|unlock <archive>                 : Advisory LunaArc lock");
         Console.WriteLine("  luna-cli test <archive> [-p password]         : Test archive integrity");
         Console.WriteLine("  luna-cli register-shell                        : Register shell integration");
         Console.WriteLine("  luna-cli unregister-shell                      : Remove shell integration");

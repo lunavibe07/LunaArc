@@ -52,6 +52,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private bool _testCreatedArchive;
     [ObservableProperty] private bool _deleteSourceAfterArchiving;
+    [ObservableProperty] private bool _createSfx;
+    [ObservableProperty] private bool _solidArchive;
+    [ObservableProperty] private bool _addRecoveryRecord;
+    [ObservableProperty] private bool _lockArchive;
 
     public bool CanEncrypt => SelectedFormatIndex == 0;
 
@@ -329,88 +333,50 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public async Task CompressFilesToArchiveAsync(IReadOnlyList<string> sourcePaths, string outputArchivePath)
     {
-        bool deleteSources = DeleteSourceAfterArchiving;
-        DeleteSourceAfterArchiving = false;
+        bool deleteSources = DeleteSourceAfterArchiving, sfx = CreateSfx, recovery = AddRecoveryRecord, locked = LockArchive;
+        DeleteSourceAfterArchiving = CreateSfx = AddRecoveryRecord = LockArchive = false;
         if (IsBusy) return;
         _activeJob = new LunaJobController();
         IsBusy = true;
         ProgressPercent = 0;
-        string? temporary = null;
-        bool verifyOutput = TestCreatedArchive || deleteSources;
-        bool published = false;
-
         try
         {
             outputArchivePath = CompressionOptionsViewModel.ValidateOutputPath(outputArchivePath, sourcePaths);
-            if (deleteSources) StatusMessage = "Capturing sources for verified deletion...";
-            var cleanup = deleteSources
-                ? await Task.Run(() => LunaArc.Core.Security.VerifiedSourceCleanup.CaptureAsync(sourcePaths, _activeJob.Token))
-                : null;
-            string directory = Path.GetDirectoryName(outputArchivePath)!;
-            Directory.CreateDirectory(directory);
-            temporary = Path.Combine(directory, ".lunaarc-" + Guid.NewGuid().ToString("N") + "." + (SelectedFormatIndex switch { 1 => "zip", 2 => "tar.gz", _ => "larc" }));
-            OutputArchiveFormat fmt = SelectedFormatIndex switch
+            StatusMessage = "Creating archive and requested companion files...";
+            var format = SelectedFormatIndex switch { 1 => OutputArchiveFormat.Zip, 2 => OutputArchiveFormat.TarGz,
+                3 => OutputArchiveFormat.SevenZip, _ => OutputArchiveFormat.LarcNative };
+            string result = await Task.Run(() => ArchiveCreationService.CreateAsync(sourcePaths, new CompressOptions
             {
-                1 => OutputArchiveFormat.Zip,
-                2 => OutputArchiveFormat.TarGz,
-                _ => OutputArchiveFormat.LarcNative
-            };
-
-            LunaCompressionLevel level = (LunaCompressionLevel)Math.Clamp(SelectedLevelIndex, 0, 5);
-
-            await Task.Run(() => _backend.CompressAsync(
-                sourcePaths,
-                new CompressOptions
-                {
-                    OutputArchivePath = temporary,
-                    Format = fmt,
-                    Level = level,
-                    Password = PasswordInput.Length == 0 ? null : PasswordInput,
-                    ArchiveComment = ArchiveComment
-                },
-                _activeJob,
-                (done, total, file) =>
-                {
-                    UpdateProgress(done, total, $"Compressing: {file}");
-                }));
-
-            if (verifyOutput)
-            {
-                StatusMessage = "Testing the new archive...";
-                var result = await Task.Run(() => _backend.TestArchiveAsync(temporary, PasswordInput.Length == 0 ? null : PasswordInput, _activeJob));
-                if (!result.IsHealthy) throw new InvalidDataException("The new archive failed verification. Sources and the destination were preserved.");
-            }
-            _activeJob.Token.ThrowIfCancellationRequested();
-            File.Move(temporary, outputArchivePath, overwrite: false);
-            temporary = null;
-            published = true;
+                OutputArchivePath = outputArchivePath, Format = format,
+                Level = (LunaCompressionLevel)Math.Clamp(SelectedLevelIndex, 0, 5),
+                Password = PasswordInput.Length == 0 ? null : PasswordInput, ArchiveComment = ArchiveComment,
+                SolidArchive = SolidArchive, DeleteSourceAfterArchiving = deleteSources
+            }, _activeJob, sfx, recovery, locked, TestCreatedArchive,
+                progress: (done, total, file) => UpdateProgress(done, total, $"Compressing: {file}")));
             ProgressPercent = 100;
-            string cleanupMessage = string.Empty;
-            if (cleanup != null)
-            {
-                StatusMessage = "Comparing archived contents before deleting sources...";
-                var result = await Task.Run(() => cleanup.DeleteArchivedSourcesAsync(_backend, outputArchivePath,
-                    PasswordInput.Length == 0 ? null : PasswordInput, _activeJob));
-                cleanupMessage = " " + result.Message;
-            }
             await OpenArchiveFileAsync(outputArchivePath);
-            StatusMessage = $"✅ Created{(verifyOutput ? " and verified" : string.Empty)} archive: {outputArchivePath}" + cleanupMessage;
+            StatusMessage = result + " " + outputArchivePath;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) { StatusMessage = "Compression cancelled. Remaining sources were kept."; }
+        catch (Exception ex) { StatusMessage = "Compression error: " + ex.Message; }
+        finally { IsBusy = false; _activeJob.Dispose(); _activeJob = null; }
+    }
+
+    public async Task RepairArchiveAsync(string damaged, string output)
+    {
+        if (IsBusy) return;
+        _activeJob = new LunaJobController();
+        IsBusy = true;
+        try
         {
-            StatusMessage = published ? $"Archive created at {outputArchivePath}. Source cleanup cancelled; remaining sources were kept." : "🛑 Compression cancelled.";
+            StatusMessage = "Verifying recovery data and reconstructing damaged blocks...";
+            await Task.Run(() => LunaArc.Core.Security.ArchiveRecoveryRecord.RepairAsync(damaged,
+                LunaArc.Core.Security.ArchiveRecoveryRecord.RecordPath(damaged), output, _activeJob));
+            StatusMessage = "Recovered archive (SHA-256 verified): " + output + ". The damaged original was preserved.";
         }
-        catch (Exception ex)
-        {
-            StatusMessage = published ? $"Archive created at {outputArchivePath}. Source cleanup did not finish: {ex.Message}" : $"❌ Compression error: {ex.Message}";
-        }
-        finally
-        {
-            if (temporary != null && File.Exists(temporary)) File.Delete(temporary);
-            IsBusy = false;
-            _activeJob?.Dispose();
-            _activeJob = null;
-        }
+        catch (OperationCanceledException) { StatusMessage = "Repair cancelled. The damaged original was preserved."; }
+        catch (Exception ex) { StatusMessage = "Repair failed: " + ex.Message; }
+        finally { IsBusy = false; _activeJob.Dispose(); _activeJob = null; }
     }
 
     [RelayCommand]

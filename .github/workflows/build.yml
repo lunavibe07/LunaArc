@@ -26,6 +26,12 @@ jobs:
           dotnet-version: 8.0.x
       - name: Restore
         run: dotnet restore LunaArc.sln
+      - name: Prepare pinned 7-Zip encoder for checks
+        shell: pwsh
+        run: |
+          ./installers/prepare_sevenzip.ps1 -OutputDirectory .tools/check-encoder -Runtime ${{ matrix.runtime }}
+          $encoder = if ($IsWindows) { 'LunaArc.7zr.exe' } else { 'LunaArc.7zz' }
+          "LUNAARC_7ZIP_PATH=$((Resolve-Path ".tools/check-encoder/$encoder").Path)" >> $env:GITHUB_ENV
       - name: Build Debug
         run: dotnet build LunaArc.sln -c Debug --no-restore
       - name: Build Release
@@ -53,6 +59,9 @@ jobs:
       - name: Published CLI on Linux
         if: runner.os == 'Linux'
         run: ./dist/linux-x64/luna-cli help
+      - name: Published advanced archive checks
+        shell: bash
+        run: python installers/test_advanced_packages.py dist/${{ matrix.runtime }}
       - name: Package Windows setup and portable
         if: runner.os == 'Windows'
         shell: pwsh

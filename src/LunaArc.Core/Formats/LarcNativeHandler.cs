@@ -72,6 +72,7 @@ public sealed class LarcNativeHandler
         LunaJobController controller,
         Action<long, long, string>? onProgress = null)
     {
+        ArchiveLock.EnsureWritable(options.OutputArchivePath);
         var filesToPack = CollectFiles(sourcePaths);
         long totalBytes = filesToPack.Sum(f => f.IsDir ? 0 : new FileInfo(f.FullPath).Length);
         long processedBytes = 0;
@@ -162,7 +163,7 @@ public sealed class LarcNativeHandler
 
             await using Stream finalOut = options.SplitVolumeSizeBytes.HasValue
                 ? new MultiVolumeOutputStream(options.OutputArchivePath, options.SplitVolumeSizeBytes.Value)
-                : new FileStream(options.OutputArchivePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                : new FileStream(options.OutputArchivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
 
             await finalOut.WriteAsync(MagicBytes.ToArray(), controller.Token);
             byte flags = 0;

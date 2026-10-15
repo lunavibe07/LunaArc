@@ -18,6 +18,8 @@ public sealed class StandardArchiveHandler : IArchiveBackend
 
     public async Task<FlatVfsArena> ReadCatalogAsync(string archivePath, string? password = null, CancellationToken ct = default)
     {
+        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, ct);
+        if (sfx != null) return await ReadCatalogAsync(sfx.Path, password, ct);
         if (archivePath.EndsWith(".larc", StringComparison.OrdinalIgnoreCase) || LarcNativeHandler.IsLarcFile(archivePath))
         {
             return await _larcHandler.ReadCatalogAsync(archivePath, password);
@@ -55,6 +57,8 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         LunaJobController controller,
         Action<long, long, string>? onProgress = null)
     {
+        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, controller.Token);
+        if (sfx != null) { await ExtractAsync(sfx.Path, options, controller, onProgress); return; }
         string targetRoot = options.DestinationDirectory;
         if (!Enum.IsDefined(options.UpdateMode)) throw new ArgumentOutOfRangeException(nameof(options.UpdateMode));
 
@@ -167,6 +171,12 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         Action<long, long, string>? onProgress = null)
     {
         controller.Token.ThrowIfCancellationRequested();
+        ArchiveLock.EnsureWritable(options.OutputArchivePath);
+        if (File.Exists(options.OutputArchivePath) || Directory.Exists(options.OutputArchivePath))
+            throw new IOException("The archive destination already exists. Choose a new output path.");
+        if (options.SolidArchive && options.Format != OutputArchiveFormat.SevenZip)
+            throw new NotSupportedException("Solid compression requires 7z output.");
+        if (!Enum.IsDefined(options.Level)) throw new ArgumentOutOfRangeException(nameof(options.Level));
         if (sourcePaths.Count == 0 || sourcePaths.Any(p => !File.Exists(p) && !Directory.Exists(p)))
             throw new ArgumentException("Every source must be an existing file or directory.");
         if (options.Format == OutputArchiveFormat.TarZst)
@@ -190,6 +200,10 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         else if (options.Format == OutputArchiveFormat.Zip)
         {
             await CreateZipArchiveAsync(sourcePaths, options, controller, onProgress);
+        }
+        else if (options.Format == OutputArchiveFormat.SevenZip)
+        {
+            await SevenZipEncoder.CreateAsync(sourcePaths, options, controller);
         }
         else
         {
@@ -224,7 +238,7 @@ public sealed class StandardArchiveHandler : IArchiveBackend
 
         await using Stream baseOut = options.SplitVolumeSizeBytes.HasValue
             ? new MultiVolumeOutputStream(options.OutputArchivePath, options.SplitVolumeSizeBytes.Value)
-            : new FileStream(options.OutputArchivePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            : new FileStream(options.OutputArchivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
 
         using var zip = new ZipArchive(baseOut, ZipArchiveMode.Create, leaveOpen: false);
         if (!string.IsNullOrEmpty(options.ArchiveComment))
@@ -281,7 +295,7 @@ public sealed class StandardArchiveHandler : IArchiveBackend
     {
         await Task.Run(() =>
         {
-            using var outStream = new FileStream(options.OutputArchivePath, FileMode.Create, FileAccess.Write);
+            using var outStream = new FileStream(options.OutputArchivePath, FileMode.CreateNew, FileAccess.Write);
             CompressionLevel compression = options.Level switch
             {
                 LunaCompressionLevel.Store => CompressionLevel.NoCompression,
@@ -320,6 +334,8 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         Action<int, int, string>? onProgress = null)
     {
         int total = 0;
+        using var sfx = await SfxArchive.OpenPayloadAsync(archivePath, controller.Token);
+        if (sfx != null) return await TestArchiveAsync(sfx.Path, password, controller, onProgress);
         int passed = 0;
         var broken = new List<string>();
 
