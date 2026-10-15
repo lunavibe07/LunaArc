@@ -19,15 +19,6 @@ public partial class MainWindow : Window
 
     private MainWindowViewModel? Vm => DataContext as MainWindowViewModel;
 
-    public async Task OpenSelfExtractingArchiveAsync(string executable)
-    {
-        if (Vm == null) return;
-        string destination = Path.Combine(Path.GetDirectoryName(executable)!, Path.GetFileNameWithoutExtension(executable) + "-extracted");
-        var choice = await ShowExtractionOptionsAsync(destination, executable);
-        if (choice != null && await Vm.OpenArchiveFileAsync(executable, choice.Password.Length > 0 ? choice.Password : null))
-            await RunExtractionAsync(choice);
-    }
-
     private async void OnRepairArchiveClicked(object? sender, RoutedEventArgs e)
     {
         if (Vm == null || Vm.IsBusy) return;
@@ -154,25 +145,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task<OverwriteMode> ConfirmOverwriteAsync(string path)
-    {
-        var dialog = new Window { Title = "File already exists", Width = 460, SizeToContent = SizeToContent.Height,
-            CanResize = false, FontSize = 12, Background = Avalonia.Media.Brush.Parse("#252525"),
-            WindowStartupLocation = WindowStartupLocation.CenterOwner, RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark };
-        var buttons = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
-        foreach (var (label, mode) in new[] { ("Overwrite", OverwriteMode.OverwriteAll), ("Skip", OverwriteMode.SkipExisting), ("Rename", OverwriteMode.AutoRename) })
-        {
-            var button = new Button { Content = label, Name = "Conflict" + label };
-            button.Click += (_, _) => dialog.Close((OverwriteMode?)mode);
-            buttons.Children.Add(button);
-        }
-        var cancel = new Button { Content = "Cancel", IsCancel = true };
-        cancel.Click += (_, _) => dialog.Close();
-        buttons.Children.Add(cancel);
-        dialog.Content = new StackPanel { Margin = new Avalonia.Thickness(18), Spacing = 16, Children =
-        { new TextBlock { Text = "A file with this name already exists:\n\n" + path + "\n\nChoose how to handle this file.", TextWrapping = Avalonia.Media.TextWrapping.Wrap }, buttons } };
-        return await dialog.ShowDialog<OverwriteMode?>(this) ?? throw new OperationCanceledException();
-    }
+    private Task<OverwriteMode> ConfirmOverwriteAsync(string path) => ExtractionConflictDialog.ShowAsync(this, path);
 
     private async void OnCompressFilesClicked(object? sender, RoutedEventArgs e)
     {

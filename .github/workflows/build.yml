@@ -59,6 +59,12 @@ jobs:
       - name: Published CLI on Linux
         if: runner.os == 'Linux'
         run: ./dist/linux-x64/luna-cli help
+      - name: Prepare virtual display for GUI lifecycle checks
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
       - name: Published advanced archive checks
         shell: bash
         run: python installers/test_advanced_packages.py dist/${{ matrix.runtime }}

@@ -10,12 +10,20 @@ public sealed record ExtractionChoice(string Destination, string Password, Overw
     ExtractionUpdateMode UpdateMode = ExtractionUpdateMode.ExtractAndReplace, bool KeepBrokenFiles = false);
 public partial class ExtractOptionsWindow : Window
 {
+    private TaskCompletionSource<ExtractionChoice?>? _standaloneResult;
     public ExtractOptionsWindow() : this(string.Empty, false) { }
     public ExtractOptionsWindow(string destination, bool requiresPassword = false)
     {
         InitializeComponent();
         DataContext = new ExtractionOptionsViewModel(destination, requiresPassword);
-        Closed += (_, _) => { Vm.Dispose(); this.FindControl<TextBox>("ExtractionPasswordBox")!.Text = string.Empty; };
+        Closed += (_, _) => { Vm.Dispose(); this.FindControl<TextBox>("ExtractionPasswordBox")!.Text = string.Empty; _standaloneResult?.TrySetResult(null); };
+    }
+    public Task<ExtractionChoice?> ShowStandaloneAsync()
+    {
+        _standaloneResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Show();
+        return _standaloneResult.Task;
     }
     private ExtractionOptionsViewModel Vm => (ExtractionOptionsViewModel)DataContext!;
     private void OnDestinationFocused(object? sender, Avalonia.Input.GotFocusEventArgs e)
@@ -36,7 +44,9 @@ public partial class ExtractOptionsWindow : Window
     private void OnExtract(object? sender, RoutedEventArgs e)
     {
         if (!Vm.ValidateDestination()) { this.FindControl<TabControl>("ExtractionTabs")!.SelectedIndex = 0; this.FindControl<TextBox>("DestinationBox")!.Focus(); return; }
-        Close(new ExtractionChoice(Vm.Destination, Vm.Password, Vm.OverwriteMode, Vm.DisplayAfterExtraction, Vm.UpdateMode, Vm.KeepBrokenFiles));
+        var choice = new ExtractionChoice(Vm.Destination, Vm.Password, Vm.OverwriteMode, Vm.DisplayAfterExtraction, Vm.UpdateMode, Vm.KeepBrokenFiles);
+        if (_standaloneResult != null) { _standaloneResult.TrySetResult(choice); Close(); }
+        else Close(choice);
     }
     private async void OnNewFolder(object? sender, RoutedEventArgs e)
     {

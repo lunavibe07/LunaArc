@@ -476,6 +476,9 @@ internal static class Program
             Pump(recoveredDialogExtraction);
             Check(Directory.GetFiles(recoveredDialogDestination, "message.txt", SearchOption.AllDirectories).Length == 1, "Blank password in extraction dialog retains the current archive's unlocked password");
 
+            window.Hide();
+            StandaloneExtractionChecks.Run(temporary, archivePath, larcOutput, "synthetic-created-password", Check, Capture);
+            window.Show();
             var compactVm = new MainWindowViewModel();
             var compact = new MainWindow { DataContext = compactVm, Width = 720, Height = 440 };
             try

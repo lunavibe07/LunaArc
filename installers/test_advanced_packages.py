@@ -74,4 +74,23 @@ with tempfile.TemporaryDirectory(prefix="LunaArc_Published_") as temporary:
     run(cli, "pack-7z", source, "-o", gui_sfx, "--solid", "on", "--sfx", "on", "--recovery", "on", "--lock", "on")
     run(cli, "test", gui_sfx)
     run(cli, "unlock", gui_sfx)
+    # Execute the actual GUI startup/lifetime for extraction-only shell commands.
+    # Linux uses a disposable X server; these commands require no interactive dialogs.
+    gui = published / ("LunaArc.exe" if os.name == "nt" else "LunaArc")
+    xvfb = shutil.which("xvfb-run") if os.name != "nt" else None
+    if os.name != "nt" and not xvfb:
+        raise RuntimeError("Published GUI extraction checks require xvfb-run on Linux.")
+    for action in ("--shell-extract-here", "--shell-extract-folder"):
+        directory = root / action.removeprefix("--shell-")
+        directory.mkdir()
+        archive = directory / "sample.zip"
+        with zipfile.ZipFile(archive, "w") as target:
+            target.writestr("standalone.txt", "Synthetic GUI extraction startup/lifetime fixture")
+        if xvfb:
+            run(Path(xvfb), "-a", gui, action, archive)
+        else:
+            run(gui, action, archive)
+        destination = directory if action.endswith("here") else directory / "sample"
+        assert (destination / "standalone.txt").read_text() == "Synthetic GUI extraction startup/lifetime fixture"
+    print("PASS: published GUI Extract Here/folder completed and exited without user interaction.")
     print("PASS: published encoder, ZIP/LARC/solid 7z standalone SFX execution, skip-existing extraction, recovery, lock/unlock and GUI SFX payload checks.")
