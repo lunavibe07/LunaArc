@@ -4,6 +4,19 @@
 
 LunaArc is a Windows and Linux archive application built with .NET 8. It includes an Avalonia desktop interface and a command-line tool that share the same archive backend.
 
+## Download
+
+Version **1.3.1**, with the new Luna logo. Windows and Linux builds passed verification in [this build run](https://github.com/lunavibe07/LunaArc/actions/runs/38666513610).
+
+| Edition | Download | Getting started |
+| --- | --- | --- |
+| Windows x64 Setup | [Download installer](https://github.com/lunavibe07/LunaArc/actions/runs/38666513610/artifacts/11941541106) | Extract the downloaded artifact ZIP, then run `LunaArc-1.3.1-setup-win-x64.exe`. |
+| Windows x64 Portable | [Download portable](https://github.com/lunavibe07/LunaArc/actions/runs/38666513610/artifacts/11941481196) | Extract the artifact ZIP and the portable ZIP inside it, then run `LunaArc.exe`. |
+| Linux x64 | [Download Linux](https://github.com/lunavibe07/LunaArc/actions/runs/38666513610/artifacts/11941316300) | Extract the ZIP, run `chmod +x LunaArc luna-cli`, then start `./LunaArc`. |
+| Windows SHA-256 checksums | [Download checksums](https://github.com/lunavibe07/LunaArc/actions/runs/38666513610/artifacts/11941326682) | Extract `SHA256SUMS.txt` to verify the Setup EXE or portable ZIP. |
+
+Sign in to GitHub to download Actions artifacts. These links are currently scheduled to expire on **January 13, 2027**. For newer builds, open [Build and verify](https://github.com/lunavibe07/LunaArc/actions/workflows/build.yml), choose a successful run and scroll to **Artifacts**. Linux Studio requires a graphical desktop and the system libraries listed under [Requirements](#requirements).
+
 ## Projects
 
 | Project | Purpose |
