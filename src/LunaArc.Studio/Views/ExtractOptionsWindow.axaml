@@ -1,7 +1,7 @@
 ﻿<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:vm="using:LunaArc.Studio.ViewModels"
  x:Class="LunaArc.Studio.Views.ExtractOptionsWindow" x:DataType="vm:ExtractionOptionsViewModel"
- Title="Extraction path and options - LunaArc" Width="640" Height="550" MinWidth="600" MinHeight="520"
+ Title="Extraction path and options - LunaArc" Width="640" Height="660" MinWidth="600" MinHeight="630"
  WindowStartupLocation="CenterOwner" RequestedThemeVariant="Dark"
  Background="#252525" FontFamily="Segoe UI,Inter" FontSize="12">
  <Window.Styles>
@@ -24,12 +24,19 @@
       <StackPanel Spacing="12">
        <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
         <StackPanel>
+         <TextBlock Text="Update mode" FontWeight="SemiBold" Margin="0,0,0,5"/>
+         <RadioButton Name="ExtractAndReplaceRadio" GroupName="Update" Content="Extract and replace files" IsChecked="{Binding ExtractAndReplace}"/>
+         <RadioButton Name="ExtractAndUpdateRadio" GroupName="Update" Content="Extract and update files" IsChecked="{Binding ExtractAndUpdate}"/>
+         <RadioButton Name="FreshenExistingRadio" GroupName="Update" Content="Freshen existing files only" IsChecked="{Binding FreshenExisting}"/>
+        </StackPanel>
+       </Border>
+       <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
+        <StackPanel>
          <TextBlock Text="Overwrite mode" FontWeight="SemiBold" Margin="0,0,0,5"/>
          <RadioButton Name="AskOverwriteRadio" GroupName="Overwrite" Content="Ask before overwrite" IsChecked="{Binding AskBeforeOverwrite}"/>
          <RadioButton Name="OverwriteAllRadio" GroupName="Overwrite" Content="Overwrite without prompt" IsChecked="{Binding OverwriteAll}"/>
          <RadioButton Name="SkipExistingBox" GroupName="Overwrite" Content="Skip existing files" IsChecked="{Binding SkipExisting}"/>
          <RadioButton Name="RenameRadio" GroupName="Overwrite" Content="Rename automatically" IsChecked="{Binding RenameAutomatically}"/>
-         <RadioButton Name="UpdateNewerRadio" GroupName="Overwrite" Content="Replace only older files" IsChecked="{Binding UpdateNewer}"/>
         </StackPanel>
        </Border>
        <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
@@ -38,7 +45,7 @@
          <CheckBox Name="DisplayAfterExtractionBox" Content="Display files after extraction" IsChecked="{Binding DisplayAfterExtraction}"/>
         </StackPanel>
        </Border>
-       <TextBlock Text="Existing files are preserved by default. Use the Password tab for encrypted archives." TextWrapping="Wrap" Foreground="#BDBDBD"/>
+       <TextBlock Text="Skip preserves existing files in every update mode. Choose Ask or Overwrite to update older copies." TextWrapping="Wrap" Foreground="#BDBDBD"/>
       </StackPanel>
       <Grid Grid.Column="2" RowDefinitions="Auto,*">
        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">

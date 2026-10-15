@@ -56,16 +56,17 @@ public sealed class StandardArchiveHandler : IArchiveBackend
         Action<long, long, string>? onProgress = null)
     {
         string targetRoot = options.DestinationDirectory;
+        if (!Enum.IsDefined(options.UpdateMode)) throw new ArgumentOutOfRangeException(nameof(options.UpdateMode));
 
         if (options.SmartFolderCreation)
         {
             var catalog = await ReadCatalogAsync(archivePath, options.Password, controller.Token);
-            if (!catalog.HasSingleRootFolder(out _))
+            if (!catalog.HasSingleRootFolder(out _) && options.UpdateMode != ExtractionUpdateMode.FreshenExisting)
             {
                 Directory.CreateDirectory(targetRoot);
             }
         }
-        else
+        else if (options.UpdateMode != ExtractionUpdateMode.FreshenExisting)
         {
             Directory.CreateDirectory(targetRoot);
         }
@@ -111,10 +112,11 @@ public sealed class StandardArchiveHandler : IArchiveBackend
 
             if (entry.IsDirectory)
             {
-                Directory.CreateDirectory(safeTargetPath);
+                if (options.UpdateMode != ExtractionUpdateMode.FreshenExisting) Directory.CreateDirectory(safeTargetPath);
                 continue;
             }
 
+            if (!ExtractionUpdatePolicy.ShouldExtract(safeTargetPath, entry.LastModifiedTime, options.UpdateMode)) continue;
             Directory.CreateDirectory(Path.GetDirectoryName(safeTargetPath)!);
 
             if (File.Exists(safeTargetPath))
@@ -251,6 +253,11 @@ public sealed class StandardArchiveHandler : IArchiveBackend
             controller.Token.ThrowIfCancellationRequested();
 
             var entry = zip.CreateEntry(relPath, netLevel);
+            // ZIP stores local DOS timestamps with two-second resolution.
+            DateTime modified = File.GetLastWriteTime(fullPath);
+            DateTime earliest = new(1980, 1, 1, 0, 0, 0, DateTimeKind.Local);
+            DateTime latest = new(2107, 12, 31, 23, 59, 58, DateTimeKind.Local);
+            entry.LastWriteTime = new DateTimeOffset(modified < earliest ? earliest : modified > latest ? latest : modified);
             await using var entryOut = entry.Open();
             await using var fileIn = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
 

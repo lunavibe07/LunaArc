@@ -189,6 +189,7 @@ public sealed class LarcNativeHandler
         LunaJobController controller,
         Action<long, long, string>? onProgress = null)
     {
+        if (!Enum.IsDefined(options.UpdateMode)) throw new ArgumentOutOfRangeException(nameof(options.UpdateMode));
         await using var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         var (header, isEncrypted, flags) = await ReadHeaderInternalAsync(fs, options.Password);
         bool isStoreMode = (flags & 0b0010) != 0;
@@ -213,10 +214,11 @@ public sealed class LarcNativeHandler
 
             if (entry.IsDir)
             {
-                Directory.CreateDirectory(targetPath);
+                if (options.UpdateMode != ExtractionUpdateMode.FreshenExisting) Directory.CreateDirectory(targetPath);
                 continue;
             }
 
+            if (!ExtractionUpdatePolicy.ShouldExtract(targetPath, new DateTime(entry.LastModifiedUtcTicks, DateTimeKind.Utc), options.UpdateMode)) continue;
             Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
 
             if (File.Exists(targetPath))

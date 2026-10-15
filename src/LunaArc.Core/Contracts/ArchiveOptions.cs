@@ -26,6 +26,16 @@ public enum OverwriteMode
 }
 
 /// <summary>
+/// Selects which archive files are eligible before overwrite handling.
+/// </summary>
+public enum ExtractionUpdateMode
+{
+    ExtractAndReplace = 0,
+    ExtractAndUpdate = 1,
+    FreshenExisting = 2
+}
+
+/// <summary>
 /// Output formats. TarZst is reserved and currently rejected by the backend.
 /// </summary>
 public enum OutputArchiveFormat
@@ -41,6 +51,7 @@ public sealed class ExtractOptions
     public required string DestinationDirectory { get; init; }
     public string? Password { get; init; }
     public OverwriteMode OverwriteMode { get; init; } = OverwriteMode.OverwriteAll;
+    public ExtractionUpdateMode UpdateMode { get; init; } = ExtractionUpdateMode.ExtractAndReplace;
     public bool SmartFolderCreation { get; init; } = true;
     public bool KeepBrokenFiles { get; init; } = false;
     public HashSet<string>? SelectedEntries { get; init; }

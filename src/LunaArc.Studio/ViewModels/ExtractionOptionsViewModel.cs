@@ -18,15 +18,21 @@ public partial class ExtractionOptionsViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(OverwriteAll))]
     [NotifyPropertyChangedFor(nameof(SkipExisting))]
     [NotifyPropertyChangedFor(nameof(RenameAutomatically))]
-    [NotifyPropertyChangedFor(nameof(UpdateNewer))]
     private OverwriteMode _overwriteMode = OverwriteMode.SkipExisting;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExtractAndReplace))]
+    [NotifyPropertyChangedFor(nameof(ExtractAndUpdate))]
+    [NotifyPropertyChangedFor(nameof(FreshenExisting))]
+    private ExtractionUpdateMode _updateMode;
 
     public ObservableCollection<ExtractionFolderNode> Folders { get; } = new();
     public bool AskBeforeOverwrite { get => OverwriteMode == OverwriteMode.Ask; set { if (value) OverwriteMode = OverwriteMode.Ask; } }
     public bool OverwriteAll { get => OverwriteMode == OverwriteMode.OverwriteAll; set { if (value) OverwriteMode = OverwriteMode.OverwriteAll; } }
     public bool SkipExisting { get => OverwriteMode == OverwriteMode.SkipExisting; set { if (value) OverwriteMode = OverwriteMode.SkipExisting; } }
     public bool RenameAutomatically { get => OverwriteMode == OverwriteMode.AutoRename; set { if (value) OverwriteMode = OverwriteMode.AutoRename; } }
-    public bool UpdateNewer { get => OverwriteMode == OverwriteMode.UpdateNewer; set { if (value) OverwriteMode = OverwriteMode.UpdateNewer; } }
+    public bool ExtractAndReplace { get => UpdateMode == ExtractionUpdateMode.ExtractAndReplace; set { if (value) UpdateMode = ExtractionUpdateMode.ExtractAndReplace; } }
+    public bool ExtractAndUpdate { get => UpdateMode == ExtractionUpdateMode.ExtractAndUpdate; set { if (value) UpdateMode = ExtractionUpdateMode.ExtractAndUpdate; } }
+    public bool FreshenExisting { get => UpdateMode == ExtractionUpdateMode.FreshenExisting; set { if (value) UpdateMode = ExtractionUpdateMode.FreshenExisting; } }
     public char PasswordCharacter => ShowPassword ? '\0' : '●';
 
     public ExtractionOptionsViewModel(string destination)

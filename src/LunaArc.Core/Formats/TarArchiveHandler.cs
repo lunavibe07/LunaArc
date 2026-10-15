@@ -57,9 +57,10 @@ internal static class TarArchiveHandler
             string target = ZipSlipGuard.ValidateAndResolvePath(options.DestinationDirectory, key);
             if (entry.EntryType == TarEntryType.Directory)
             {
-                Directory.CreateDirectory(target);
+                if (options.UpdateMode != ExtractionUpdateMode.FreshenExisting) Directory.CreateDirectory(target);
                 continue;
             }
+            if (!ExtractionUpdatePolicy.ShouldExtract(target, entry.ModificationTime.UtcDateTime, options.UpdateMode)) continue;
             if (File.Exists(target))
             {
                 var mode = options.OverwriteMode;

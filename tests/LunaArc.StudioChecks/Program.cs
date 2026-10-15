@@ -128,6 +128,7 @@ internal static class Program
             Dispatcher.UIThread.RunJobs();
             var extractionOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
             Check(extractionOptions.FindControl<RadioButton>("SkipExistingBox")!.IsChecked == true, "Explorer extraction defaults to preserving existing files");
+            Check(extractionOptions.FindControl<RadioButton>("ExtractAndReplaceRadio")!.IsChecked == true, "Update mode defaults to extracting all eligible files");
             Check(extractionOptions.FindControl<TextBox>("ExtractionPasswordBox")!.PasswordChar != '\0', "Extraction password masked");
             var extractionVm = (ExtractionOptionsViewModel)extractionOptions.DataContext!;
             string browserRoot = Path.Combine(temporary, "folder browser");
@@ -171,12 +172,33 @@ internal static class Program
             Dispatcher.UIThread.RunJobs();
             Check(((ExtractionOptionsViewModel)renameOptions.DataContext!).RenameAutomatically && renameOptions.FindControl<RadioButton>("SkipExistingBox")!.IsChecked == false, "Overwrite radios choose one backend policy");
             Capture(renameOptions, "extract-options.png");
-            renameOptions.Width = 600; renameOptions.Height = 520;
+            renameOptions.Width = 600; renameOptions.Height = 630;
             Dispatcher.UIThread.RunJobs();
             Capture(renameOptions, "extract-compact.png");
             Click(renameOptions.FindControl<Button>("StartExtractionButton")!);
             Pump(renameExtraction);
             Check(File.Exists(Path.Combine(chosenDestination, "readme (1).md")), "Rename extraction preserves existing files and writes another copy");
+
+            string freshenDestination = Path.Combine(temporary, "freshen extraction");
+            Directory.CreateDirectory(freshenDestination);
+            File.WriteAllText(Path.Combine(freshenDestination, "readme.md"), "Old copy");
+            File.SetLastWriteTimeUtc(Path.Combine(freshenDestination, "readme.md"), new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            Task freshenExtraction = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.Extract, archivePath));
+            Dispatcher.UIThread.RunJobs();
+            var freshenOptions = (ExtractOptionsWindow)window.OwnedWindows.Single();
+            freshenOptions.FindControl<TextBox>("DestinationBox")!.Text = freshenDestination;
+            freshenOptions.FindControl<RadioButton>("FreshenExistingRadio")!.IsChecked = true;
+            freshenOptions.FindControl<RadioButton>("OverwriteAllRadio")!.IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            var freshenVm = (ExtractionOptionsViewModel)freshenOptions.DataContext!;
+            Check(freshenVm.FreshenExisting && freshenVm.OverwriteAll && freshenOptions.FindControl<RadioButton>("ExtractAndReplaceRadio")!.IsChecked == false,
+                "Update mode and overwrite mode are independent radio groups");
+            Capture(freshenOptions, "extract-freshen.png");
+            Click(freshenOptions.FindControl<Button>("StartExtractionButton")!);
+            Pump(freshenExtraction);
+            Check(File.ReadAllText(Path.Combine(freshenDestination, "readme.md")).StartsWith("Synthetic LunaArc")
+                && Directory.GetFiles(freshenDestination, "*", SearchOption.AllDirectories).Length == 1
+                && Directory.GetDirectories(freshenDestination).Length == 0, "Freshen from the dialog updates an existing older file without adding files or folders");
 
             string askDestination = Path.Combine(temporary, "ask extraction");
             Directory.CreateDirectory(askDestination);

@@ -47,23 +47,32 @@ The interface lists archive contents; it is not a general system-drive file brow
 
 ## Extract files
 
-Version **1.3.2** adds a dark extraction dialog with a folder tree and **General / Password** tabs, available in both Setup and Portable editions.
+The dark extraction dialog includes a folder tree and **General / Password** tabs in both Setup and Portable editions. Version **1.3.3** adds a separate **Update mode** group with all three file-selection policies below.
 
 1. Open an archive and select **Extract To**, or right-click an archive in Windows Explorer and choose **LunaArc > Extract files...**. On Windows 11, the classic menu may be under **Show more options**.
 2. In **General**, enter a full destination path, select a folder in the tree, or use **Browse...**. Expand a tree item to load its subfolders.
 3. Use **New folder** to create a folder inside the current destination. A destination that does not yet exist is created during extraction.
-4. Choose how to handle existing files using the table below. **Skip existing files** is selected by default.
+4. Select an **Update mode** to choose eligible files, then an **Overwrite mode** to handle eligible conflicts. **Extract and replace files** and **Skip existing files** are the defaults. Select **Ask before overwrite** or **Overwrite without prompt** when you want to update older copies.
 5. For an encrypted archive, enter its password in the **Password** tab. Leave it blank to reuse the password already unlocked for this archive. **Show password** reveals the input; closing the dialog clears it.
 6. Optionally enable **Display files after extraction** to open the destination in the system file manager after a successful extraction.
 7. Select **OK** to start, **Cancel** to close the options, or **Help** for a short explanation of the controls.
 
-| Overwrite mode | Behavior |
+| Update mode | Eligible files |
+| --- | --- |
+| Extract and replace files | All archive files; conflicts are handled by Overwrite mode. |
+| Extract and update files | Missing files and files whose archive copy is newer than the destination copy. |
+| Freshen existing files only | Only files already present at the destination whose archive copy is newer. Missing files and directories are not created. |
+
+Update and Freshen preserve files with equal or newer destination timestamps. If an archive file has no usable modification timestamp, these modes preserve its existing destination copy. The source archive is preserved. Comparison follows the timestamp precision available in the format; ZIPs created by LunaArc retain source modification times using local DOS timestamps with two-second precision and the ZIP date range of 1980–2107.
+
+| Overwrite mode | Behavior for eligible conflicts |
 | --- | --- |
 | Ask before overwrite | For each conflict, choose **Overwrite**, **Skip**, **Rename** or **Cancel**. Cancel stops the extraction job. |
 | Overwrite without prompt | Replace existing destination files. |
 | Skip existing files | Preserve existing files and extract files that are not already present. |
 | Rename automatically | Keep both copies, using a name such as `readme (1).txt` for the extracted copy. |
-| Replace only older files | Compare modification times and skip existing files that are equally new or newer when an archive timestamp is available. New files are also extracted. |
+
+**Skip existing files** also skips older copies selected by Update or Freshen. **Rename automatically** writes a renamed copy of each eligible conflicting file. Update mode filters files before prompting or renaming.
 
 **New folder** takes effect immediately. Cancelling does not delete folders you created or roll back files already extracted. The source archive is preserved.
 

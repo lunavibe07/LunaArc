@@ -6,7 +6,8 @@ using LunaArc.Studio.ViewModels;
 
 namespace LunaArc.Studio.Views;
 
-public sealed record ExtractionChoice(string Destination, string Password, OverwriteMode OverwriteMode, bool DisplayAfterExtraction = false);
+public sealed record ExtractionChoice(string Destination, string Password, OverwriteMode OverwriteMode, bool DisplayAfterExtraction = false,
+    ExtractionUpdateMode UpdateMode = ExtractionUpdateMode.ExtractAndReplace);
 public partial class ExtractOptionsWindow : Window
 {
     public ExtractOptionsWindow()
@@ -28,7 +29,7 @@ public partial class ExtractOptionsWindow : Window
     private void OnExtract(object? sender, RoutedEventArgs e)
     {
         if (!Vm.ValidateDestination()) { this.FindControl<TabControl>("ExtractionTabs")!.SelectedIndex = 0; this.FindControl<TextBox>("DestinationBox")!.Focus(); return; }
-        Close(new ExtractionChoice(Vm.Destination, Vm.Password, Vm.OverwriteMode, Vm.DisplayAfterExtraction));
+        Close(new ExtractionChoice(Vm.Destination, Vm.Password, Vm.OverwriteMode, Vm.DisplayAfterExtraction, Vm.UpdateMode));
     }
     private async void OnNewFolder(object? sender, RoutedEventArgs e)
     {
@@ -57,7 +58,7 @@ public partial class ExtractOptionsWindow : Window
         var close = new Button { Content = "Close", IsDefault = true, IsCancel = true };
         close.Click += (_, _) => dialog.Close();
         dialog.Content = new StackPanel { Margin = new Avalonia.Thickness(18), Spacing = 14, Children =
-        { new TextBlock { Text = "Choose a destination or select a folder in the tree. New folder creates a folder inside that destination.\n\nSkip existing files preserves files already on disk. Ask before overwrite prompts for each conflict. Rename automatically keeps both copies. Replace only older files compares modification times and still extracts new files.\n\nUse the Password tab for encrypted archives. Cancel leaves the archive unchanged.", TextWrapping = Avalonia.Media.TextWrapping.Wrap }, close } };
+        { new TextBlock { Text = "Choose a destination or select a folder in the tree. New folder creates a folder inside that destination.\n\nUpdate mode selects files first: Extract and replace includes all files; Extract and update adds missing files and updates older copies; Freshen updates only existing older files. Equal/newer destination files and existing files without an archive timestamp are preserved by the last two modes.\n\nOverwrite mode then handles eligible conflicts. Choose Ask or Overwrite to replace older files; Skip still preserves them. Rename keeps both copies.\n\nUse the Password tab for encrypted archives. Cancel leaves the source archive unchanged.", TextWrapping = Avalonia.Media.TextWrapping.Wrap }, close } };
         await dialog.ShowDialog(this);
     }
     private static Window CreateSmallDialog(string title) => new()

@@ -91,7 +91,7 @@ public partial class MainWindow : Window
     {
         if (Vm == null) return;
         bool success = await Vm.ExtractCurrentArchiveToAsync(choice.Destination, choice.OverwriteMode,
-            path => Dispatcher.UIThread.InvokeAsync(() => ConfirmOverwriteAsync(path)).GetAwaiter().GetResult());
+            path => Dispatcher.UIThread.InvokeAsync(() => ConfirmOverwriteAsync(path)).GetAwaiter().GetResult(), choice.UpdateMode);
         if (success && choice.DisplayAfterExtraction)
         {
             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(choice.Destination) { UseShellExecute = true }); }
