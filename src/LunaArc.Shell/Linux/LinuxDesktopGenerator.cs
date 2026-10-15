@@ -20,6 +20,8 @@ public sealed class LinuxDesktopGenerator : IOsShellRegistrar
             throw new FileNotFoundException("Publish the GUI and CLI to the same directory before registering shell integration.");
 
         string appsDir = Path.Combine(UserDataRoot, "applications");
+        string logoPath = Path.Combine(Path.GetDirectoryName(guiExecutablePath)!, "LunaArc.png");
+        string icon = File.Exists(logoPath) ? EscapeDesktopValue(logoPath) : "package-x-generic";
         Directory.CreateDirectory(appsDir);
         File.WriteAllText(Path.Combine(appsDir, "lunaarc.desktop"), string.Join('\n', new[]
         {
@@ -28,7 +30,7 @@ public sealed class LinuxDesktopGenerator : IOsShellRegistrar
             "Name=LunaArc Archiver",
             "Comment=Open and extract archives",
             $"Exec={QuoteDesktopArgument(guiExecutablePath)} %f",
-            "Icon=package-x-generic",
+            $"Icon={icon}",
             "Terminal=false",
             "Categories=Utility;Archiving;Compression;",
             "MimeType=application/zip;application/vnd.rar;application/x-7z-compressed;application/x-tar;application/gzip;",
@@ -56,6 +58,9 @@ public sealed class LinuxDesktopGenerator : IOsShellRegistrar
             if (File.Exists(path)) File.Delete(path);
         }
     }
+
+    private static string EscapeDesktopValue(string value) =>
+        value.Replace("\\", "\\\\").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
 
     private static string QuoteDesktopArgument(string path)
     {

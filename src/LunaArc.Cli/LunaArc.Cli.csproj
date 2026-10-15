@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>luna-cli</AssemblyName>
+    <ApplicationIcon>../../branding/app_logo.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\LunaArc.Core\LunaArc.Core.csproj" />

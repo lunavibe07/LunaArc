@@ -29,6 +29,15 @@ internal static class Program
             window.Show();
             Dispatcher.UIThread.RunJobs();
             Check(window.ActualThemeVariant == ThemeVariant.Light, "Light desktop theme");
+            Check(window.Icon != null, "Application logo loads from embedded resources");
+            window.FindControl<MenuItem>("AboutMenu")!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var about = window.OwnedWindows.Single();
+            var aboutContent = (Grid)about.Content!;
+            var aboutLogo = ((StackPanel)aboutContent.Children[0]).Children.OfType<Image>().Single();
+            Check(aboutLogo.Source is Avalonia.Media.Imaging.Bitmap { PixelSize.Width: 256, PixelSize.Height: 256 }, "About dialog displays the supplied logo");
+            Capture(about, "about.png");
+            Click(aboutContent.Children.OfType<Button>().Single());
             Check(!window.FindControl<Button>("ExtractButton")!.IsEnabled, "Extraction disabled without an archive");
             Capture(window, "empty.png");
 

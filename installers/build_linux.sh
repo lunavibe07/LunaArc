@@ -27,6 +27,7 @@ done
 if [[ "$runtime" == linux-* ]]; then chmod +x "$publish_dir/LunaArc" "$publish_dir/luna-cli"; fi
 cp "$project_root/branding/EULA_License.txt" "$project_root/README.md" "$publish_dir/"
 cp "$project_root/branding/Fluent_Icons_LICENSE.txt" "$publish_dir/"
+cp "$project_root/branding/app_logo_256.png" "$publish_dir/LunaArc.png"
 if [[ "$runtime" == win-* ]]; then
   cp "$project_root/installers/InstallContextMenu.cmd" "$project_root/installers/UninstallContextMenu.cmd" "$publish_dir/"
 fi

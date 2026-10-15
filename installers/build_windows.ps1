@@ -32,6 +32,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/EULA_License.txt') -Destination $publishDir
     Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/Fluent_Icons_LICENSE.txt') -Destination $publishDir
     Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $publishDir
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/app_logo_256.png') -Destination (Join-Path $publishDir 'LunaArc.png')
     if ($Runtime.StartsWith('win-')) {
         foreach ($script in @('InstallContextMenu.cmd', 'UninstallContextMenu.cmd')) {
             Copy-Item -LiteralPath (Join-Path $projectRoot "installers/$script") -Destination $publishDir

@@ -28,6 +28,7 @@ OutputBaseFilename=LunaArc-{#AppVersion}-setup-win-x64
 Compression=lzma2/fast
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\branding\app_logo.ico
 LicenseFile=..\branding\EULA_License.txt
 UninstallDisplayIcon={app}\LunaArc.exe
 CloseApplications=yes

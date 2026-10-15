@@ -41,33 +41,8 @@ try {
     $manifest.Save((Join-Path $staging 'AppxManifest.xml'))
     $assets = Join-Path $staging 'Assets'
     New-Item -ItemType Directory -Path $assets -Force | Out-Null
-    # Render a small code-native adaptation of branding/app_logo.svg.
-    Add-Type -AssemblyName System.Drawing
-    $bitmap = New-Object System.Drawing.Bitmap(256,256)
-    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-    $dark = New-Object System.Drawing.SolidBrush([System.Drawing.ColorTranslator]::FromHtml('#0F172A'))
-    $gradient = New-Object System.Drawing.Drawing2D.LinearGradientBrush((New-Object System.Drawing.Point(40,40)), (New-Object System.Drawing.Point(208,208)), ([System.Drawing.ColorTranslator]::FromHtml('#6366F1')), ([System.Drawing.ColorTranslator]::FromHtml('#EC4899')))
-    $white = New-Object System.Drawing.SolidBrush([System.Drawing.ColorTranslator]::FromHtml('#F8FAFC'))
-    $blue = New-Object System.Drawing.SolidBrush([System.Drawing.ColorTranslator]::FromHtml('#38BDF8'))
-    try {
-        $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-        $graphics.FillRectangle($dark,0,0,256,256)
-        $graphics.FillEllipse($gradient,40,40,168,168)
-        $graphics.FillEllipse($dark,88,40,136,136)
-        $graphics.FillRectangle($white,112,88,24,16)
-        $graphics.FillRectangle($white,112,114,24,16)
-        $graphics.FillRectangle($blue,112,140,24,28)
-        $bitmap.Save((Join-Path $assets 'Logo.png'),[System.Drawing.Imaging.ImageFormat]::Png)
-        $png = [IO.File]::ReadAllBytes((Join-Path $assets 'Logo.png'))
-        $iconStream = [IO.File]::Create((Join-Path $OutputDirectory 'LunaArc.Menu.ico'))
-        $writer = New-Object IO.BinaryWriter($iconStream)
-        try {
-            $writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]1)
-            $writer.Write([byte]0); $writer.Write([byte]0); $writer.Write([byte]0); $writer.Write([byte]0)
-            $writer.Write([uint16]1); $writer.Write([uint16]32); $writer.Write([uint32]$png.Length); $writer.Write([uint32]22)
-            $writer.Write($png)
-        } finally { $writer.Dispose(); $iconStream.Dispose() }
-    } finally { $graphics.Dispose(); $bitmap.Dispose(); $dark.Dispose(); $gradient.Dispose(); $white.Dispose(); $blue.Dispose() }
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/app_logo_256.png') -Destination (Join-Path $assets 'Logo.png')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/app_logo.ico') -Destination (Join-Path $OutputDirectory 'LunaArc.Menu.ico')
     & $signtool sign /fd SHA256 /sha1 $certificate.Thumbprint $dll
     if ($LASTEXITCODE -ne 0) { throw 'Native menu signing failed.' }
     Set-Content -LiteralPath (Join-Path $assets 'MenuDll.sha256') -Value (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash -Encoding ASCII

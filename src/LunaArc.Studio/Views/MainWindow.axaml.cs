@@ -179,13 +179,13 @@ public partial class MainWindow : Window
 
     private async void OnAboutClicked(object? sender, RoutedEventArgs e) =>
         await ShowInformationAsync("About LunaArc", "LunaArc Archiver",
-            $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}\nArchive manager for Windows and Linux.\n\nCreate .larc, ZIP and TAR GZip archives.\nBrowse, extract and test existing archives.\n\nToolbar icons: Microsoft Fluent UI System Icons (MIT).\nCopyright 2026 LunaArc Software.");
+            $"Version {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}\nArchive manager for Windows and Linux.\n\nCreate .larc, ZIP and TAR GZip archives.\nBrowse, extract and test existing archives.\n\nToolbar icons: Microsoft Fluent UI System Icons (MIT).\nCopyright 2026 LunaArc Software.", showLogo: true);
 
-    private Task ShowInformationAsync(string title, string heading, string body)
+    private Task ShowInformationAsync(string title, string heading, string body, bool showLogo = false)
     {
         var dialog = new Window
         {
-            Title = title, Width = 470, Height = 310, CanResize = false,
+            Title = title, Width = 470, Height = showLogo ? 420 : 310, CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Background = Avalonia.Media.Brushes.White,
             FontFamily = FontFamily, FontSize = 12
@@ -194,7 +194,17 @@ public partial class MainWindow : Window
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, IsDefault = true, IsCancel = true };
         close.Click += (_, _) => dialog.Close();
         var content = new Grid { Margin = new Avalonia.Thickness(20), RowDefinitions = new RowDefinitions("Auto,*,Auto") };
-        content.Children.Add(new TextBlock { Text = heading, FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 0, 0, 12) });
+        var header = new StackPanel { Spacing = 12, Margin = new Avalonia.Thickness(0, 0, 0, 12) };
+        if (showLogo)
+        {
+            using var stream = Avalonia.Platform.AssetLoader.Open(new Uri("avares://LunaArc/Assets/app_logo.png"));
+            var logo = new Avalonia.Media.Imaging.Bitmap(stream);
+            header.Children.Add(new Image { Name = "AboutLogo", Source = logo, Width = 96, Height = 96,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left });
+            dialog.Closed += (_, _) => logo.Dispose();
+        }
+        header.Children.Add(new TextBlock { Text = heading, FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold });
+        content.Children.Add(header);
         var text = new TextBlock { Text = body, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
         var scroll = new ScrollViewer { Content = text };
         Grid.SetRow(scroll, 1);

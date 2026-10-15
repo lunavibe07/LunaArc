@@ -48,7 +48,7 @@ function Assert-ModernOwner([string]$Directory) {
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 try {
     Expand-Archive -LiteralPath $portable -DestinationPath $portableDir
-    foreach ($file in @('LunaArc.exe', 'luna-cli.exe', 'InstallContextMenu.cmd', 'UninstallContextMenu.cmd', 'LunaArc.ContextMenu.dll','LunaArc.Menu.ico','LunaArc.ShellMenu.msix','LunaArc.Menu.cer','RegisterWindows11Menu.ps1','InstallWindows11Menu.cmd')) {
+    foreach ($file in @('LunaArc.exe', 'luna-cli.exe', 'LunaArc.png', 'InstallContextMenu.cmd', 'UninstallContextMenu.cmd', 'LunaArc.ContextMenu.dll','LunaArc.Menu.ico','LunaArc.ShellMenu.msix','LunaArc.Menu.cer','RegisterWindows11Menu.ps1','InstallWindows11Menu.cmd')) {
         if (-not (Test-Path -LiteralPath (Join-Path $portableDir $file))) { throw "Portable is missing $file" }
     }
     Invoke-HiddenProgram $setup @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/TASKS=contextmenu', "/DIR=`"$installDir`"")
@@ -56,7 +56,7 @@ try {
     Register-ModernMenu $installDir
     # Equal-version registration moves the modern menu to the portable external folder.
     Register-ModernMenu $portableDir
-    foreach ($exe in @('LunaArc.exe', 'luna-cli.exe','LunaArc.ContextMenu.dll','LunaArc.ShellMenu.msix','LunaArc.Menu.cer')) {
+    foreach ($exe in @('LunaArc.exe', 'luna-cli.exe','LunaArc.png','LunaArc.Menu.ico','LunaArc.ContextMenu.dll','LunaArc.ShellMenu.msix','LunaArc.Menu.cer')) {
         $installedHash = (Get-FileHash -LiteralPath (Join-Path $installDir $exe)).Hash
         $portableHash = (Get-FileHash -LiteralPath (Join-Path $portableDir $exe)).Hash
         if ($installedHash -ne $portableHash) { throw "Installed and portable $exe differ." }

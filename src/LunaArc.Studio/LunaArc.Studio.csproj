@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AssemblyName>LunaArc</AssemblyName>
+    <ApplicationIcon>../../branding/app_logo.ico</ApplicationIcon>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
   <ItemGroup>
@@ -13,6 +14,8 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
   </ItemGroup>
   <ItemGroup>
+    <AvaloniaResource Include="../../branding/app_logo.ico" Link="Assets/app_logo.ico" />
+    <AvaloniaResource Include="../../branding/app_logo_256.png" Link="Assets/app_logo.png" />
     <ProjectReference Include="..\LunaArc.Core\LunaArc.Core.csproj" />
     <ProjectReference Include="..\LunaArc.Shell\LunaArc.Shell.csproj" />
   </ItemGroup>
