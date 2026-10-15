@@ -17,8 +17,9 @@ public sealed class LunaJobController : IDisposable
 
     public void Cancel()
     {
-        _pauseGate.Set();
+        // Publish cancellation before releasing paused workers.
         _cts.Cancel();
+        _pauseGate.Set();
     }
 
     public void WaitIfPaused() => _pauseGate.Wait(_cts.Token);
