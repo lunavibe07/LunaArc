@@ -52,14 +52,27 @@ Version **1.3.4** introduces a dark **Archive name and parameters** dialog conta
 1. Select files using **Add**, or right-click a file/folder in Explorer and choose a LunaArc compression command.
 2. Enter a full **Archive name**, or use **Browse...**. The suggested name is unused; select another name if the destination already exists. Save outside selected source folders.
 3. Choose **LARC**, **ZIP** or **TAR GZip** and a **Compression method** from Store through Best. Selecting a format updates the file extension.
-4. Optionally select **Test archived files** to verify archive contents before the completed file is placed at the requested output path.
+4. Choose the supported **Archiving options** below. **Test archived files** verifies contents before the completed file is placed at the requested output path.
 5. Use **Set password...** for LARC encryption. Enter and confirm the password; **Show password** reveals the fields. Both fields can be left blank to remove the password. ZIP/TAR GZip password creation is not supported and is rejected.
 6. Expand **Archive comment** to enter an optional LARC/ZIP comment. TAR GZip comments are not supported.
-7. Select **OK** to create the archive and open it in LunaArc. **Cancel** discards draft changes; sources and existing archives are preserved. **Help** explains the controls.
+7. Select **OK** to create the archive and open it in LunaArc. **Cancel** discards draft changes. Sources are kept unless deletion was explicitly selected for this creation. **Help** explains the controls.
 
-**Archive mode** currently creates new archives. Updating/synchronizing existing archives, RAR creation, SFX, solid-mode controls, custom dictionaries, recovery records and archive locking are not provided by this dialog. Compression methods use each format's available presets; ZIP and GZip map several presets to the same engine level.
+Version **1.3.5** shows the six WinRAR-style archiving options with their actual availability:
 
-When opened from **Options**, General edits defaults for the next compression operation; the output field is disabled and OK does not modify an archive already open. New archive creation in Studio uses a temporary file in the destination directory, optionally verifies it, and moves it into place without replacing an existing file. Failure/cancellation cleans up that temporary file; it does not remove the source files.
+| Archiving option | Availability |
+| --- | --- |
+| Delete files after archiving | Supported for actual creation; off by default for every operation. Forces archive testing. |
+| Create SFX archive | Visible and disabled; not supported. |
+| Create solid archive | Visible and disabled; not supported. |
+| Add recovery record | Visible and disabled; not supported. |
+| Test archived files | Supported; required and locked on while source deletion is selected. |
+| Lock archive | Visible and disabled; not supported. |
+
+**Delete files after archiving** first captures the selected sources, verifies and publishes the archive, extracts a verification copy and compares SHA-256 content hashes with the captured and current sources. Matching files are moved to private sibling names, checked again, then deleted. Changed, new or unarchived sources are kept; only represented empty directories are removed. This requires extra time and temporary extraction space. Links/reparse points, overlapping inputs, duplicate archive names and filesystem-root deletion are rejected. If a changed source cannot be restored to its original path, its retained location is reported. Cancelling during cleanup stops further deletion; previously removed files remain available in the completed archive.
+
+**Archive mode** currently creates new archives. Updating/synchronizing existing archives, RAR creation and custom dictionary controls are not available. Compression methods use each format's presets; ZIP and GZip map several presets to the same engine level.
+
+When opened from **Options**, General edits defaults for the next compression operation; output editing and source deletion are disabled, and OK does not modify an archive already open. New archive creation in Studio uses a temporary output, optionally verifies it, and moves it into place without replacing an existing file. Failure/cancellation before publication cleans up that temporary output and preserves sources. Source deletion is a one-operation opt-in and is never saved as a default.
 
 ## Extract files
 

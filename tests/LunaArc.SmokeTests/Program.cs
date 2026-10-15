@@ -20,6 +20,7 @@ try
     File.WriteAllBytes(Path.Combine(source, "data.bin"), RandomNumberGenerator.GetBytes(150_000));
     var backend = new StandardArchiveHandler();
     await ExtractionUpdateChecks.RunAsync(root, backend, Check);
+    await VerifiedSourceCleanupChecks.RunAsync(root, backend, Check);
 
     foreach (var (format, extension, password, level) in new[]
     {

@@ -1,7 +1,7 @@
 ﻿<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:vm="using:LunaArc.Studio.ViewModels" x:Class="LunaArc.Studio.Views.ArchiveOptionsWindow"
  x:DataType="vm:CompressionOptionsViewModel" Title="Archive name and parameters - LunaArc"
- Width="590" Height="570" MinWidth="560" MinHeight="540" RequestedThemeVariant="Dark"
+ Width="630" Height="710" MinWidth="600" MinHeight="670" RequestedThemeVariant="Dark"
  Background="#252525" FontFamily="Segoe UI,Inter" FontSize="12" WindowStartupLocation="CenterOwner">
  <Window.Styles>
   <Style Selector="Button"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="12,3"/></Style>
@@ -36,24 +36,31 @@
           <ComboBoxItem Content="Normal"/><ComboBoxItem Content="Good"/><ComboBoxItem Content="Best"/>
          </ComboBox>
         </StackPanel>
+        <TextBlock Text="{Binding FormatNote}" TextWrapping="Wrap" Foreground="#BDBDBD"/>
+        <TextBlock Text="Deletion is off by default. It forces testing and uses temporary extraction space. Changed or unarchived sources are kept." Foreground="#BDBDBD" TextWrapping="Wrap"/>
        </StackPanel>
        <StackPanel Grid.Column="2" Spacing="12">
         <StackPanel Spacing="6">
          <TextBlock Text="Archive mode"/>
          <Border BorderBrush="#737373" BorderThickness="1" Padding="8,7"><TextBlock Text="Create new archive"/></Border>
-         <TextBlock Text="Choose an unused file name. Existing archives and source files are preserved." Foreground="#BDBDBD" TextWrapping="Wrap"/>
+         <TextBlock Text="Choose an unused file name. Existing archives are preserved." Foreground="#BDBDBD" TextWrapping="Wrap"/>
         </StackPanel>
         <Border BorderBrush="#737373" BorderThickness="1" Padding="10,8">
          <StackPanel>
           <TextBlock Text="Archiving options" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <CheckBox Name="TestCreatedArchiveBox" Content="Test archived files" IsChecked="{Binding TestCreatedArchive}"/>
+          <CheckBox Name="DeleteSourceAfterArchivingBox" Content="Delete files after archiving" IsChecked="{Binding DeleteSourceAfterArchiving}" IsEnabled="{Binding IsCreation}" ToolTip.Tip="Requires archive and source-content verification. Applies to this creation only."/>
+          <CheckBox Name="CreateSfxBox" Content="Create SFX archive" IsEnabled="False" ToolTip.Tip="Not supported in this version."/>
+          <CheckBox Name="CreateSolidBox" Content="Create solid archive" IsEnabled="False" ToolTip.Tip="Not supported in this version."/>
+          <CheckBox Name="RecoveryRecordBox" Content="Add recovery record" IsEnabled="False" ToolTip.Tip="Not supported in this version."/>
+          <CheckBox Name="TestCreatedArchiveBox" Content="Test archived files" IsChecked="{Binding TestCreatedArchive}" IsEnabled="{Binding CanToggleTest}" ToolTip.Tip="Testing is required when deleting source files."/>
+          <CheckBox Name="LockArchiveBox" Content="Lock archive" IsEnabled="False" ToolTip.Tip="Not supported in this version."/>
+          <TextBlock Text="Unsupported: SFX, solid, recovery record, archive lock." TextWrapping="Wrap" Foreground="#BDBDBD" FontSize="11" Margin="0,6,0,0"/>
          </StackPanel>
         </Border>
         <Button Name="SetArchivePasswordButton" Content="Set password..." HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnSetPassword"/>
         <TextBlock Text="{Binding PasswordSummary}" Foreground="#BDBDBD"/>
        </StackPanel>
       </Grid>
-      <TextBlock Text="{Binding FormatNote}" TextWrapping="Wrap" Foreground="#BDBDBD"/>
       <Expander Header="Archive comment" HorizontalAlignment="Stretch">
        <TextBox Name="ArchiveCommentBox" Text="{Binding ArchiveComment}" AcceptsReturn="True" TextWrapping="Wrap" Height="70" Watermark="Optional comment for LARC / ZIP"/>
       </Expander>

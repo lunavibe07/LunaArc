@@ -12,6 +12,10 @@ public partial class CompressionOptionsViewModel : ObservableObject
     [ObservableProperty] private string _passwordInput = string.Empty;
     [ObservableProperty] private string _archiveComment = string.Empty;
     [ObservableProperty] private bool _testCreatedArchive;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanToggleTest))]
+    private bool _deleteSourceAfterArchiving;
+    public bool CanToggleTest => !DeleteSourceAfterArchiving;
     [ObservableProperty] private string _status = string.Empty;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLarc))]
@@ -49,6 +53,10 @@ public partial class CompressionOptionsViewModel : ObservableObject
         ArchiveName = path;
     }
     partial void OnArchiveNameChanged(string value) => Status = string.Empty;
+    partial void OnDeleteSourceAfterArchivingChanged(bool value)
+    {
+        if (value) TestCreatedArchive = true;
+    }
     partial void OnArchiveCommentChanged(string value) => Status = string.Empty;
     partial void OnPasswordInputChanged(string value)
     {
@@ -111,5 +119,6 @@ public partial class CompressionOptionsViewModel : ObservableObject
         settings.PasswordInput = PasswordInput;
         settings.ArchiveComment = ArchiveComment;
         settings.TestCreatedArchive = TestCreatedArchive;
+        settings.DeleteSourceAfterArchiving = IsCreation && DeleteSourceAfterArchiving;
     }
 }

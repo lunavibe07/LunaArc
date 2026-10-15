@@ -89,6 +89,7 @@ internal static class Program
             Click(window.FindControl<Button>("OptionsButton")!);
             var options = (ArchiveOptionsWindow)window.OwnedWindows.Single();
             Check(options.Options.SelectedFormatIndex == vm.SelectedFormatIndex && options.FindControl<TabControl>("CompressionTabs")!.Items.Count == 1, "Compression options show active format and only General");
+            Check(!options.FindControl<CheckBox>("DeleteSourceAfterArchivingBox")!.IsEnabled, "Source deletion cannot be saved in default Options");
             Capture(options, "options.png");
             int originalLevel = vm.SelectedLevelIndex;
             options.Options.SelectedLevelIndex = 5;
@@ -101,6 +102,9 @@ internal static class Program
             Task createZip = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.AddZip, compressionSource));
             Dispatcher.UIThread.RunJobs();
             var zipOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
+            Check(zipOptions.FindControl<CheckBox>("DeleteSourceAfterArchivingBox")!.IsChecked == false, "Source deletion defaults off for every creation");
+            Check(new[] { "CreateSfxBox", "CreateSolidBox", "RecoveryRecordBox", "LockArchiveBox" }.All(name =>
+                zipOptions.FindControl<CheckBox>(name) is { IsEnabled: false, IsChecked: false }), "Unsupported WinRAR-style options are visible, disabled and unchecked");
             Check(zipOptions.Options.IsZip && zipOptions.FindControl<TextBox>("ArchiveNameBox")!.IsEnabled, "Explorer Add ZIP opens General with an editable output name");
             zipOptions.Options.ArchiveName = archivePath;
             Click(zipOptions.FindControl<Button>("AcceptOptionsButton")!);
@@ -111,7 +115,7 @@ internal static class Program
             zipOptions.FindControl<CheckBox>("TestCreatedArchiveBox")!.IsChecked = true;
             zipOptions.Options.ArchiveComment = "Synthetic General comment";
             Capture(zipOptions, "compression-general.png");
-            zipOptions.Width = 560; zipOptions.Height = 540;
+            zipOptions.Width = 600; zipOptions.Height = 670;
             Capture(zipOptions, "compression-compact.png");
             string zipOutput = zipOptions.Options.ArchiveName;
             Click(zipOptions.FindControl<Button>("AcceptOptionsButton")!);
@@ -154,6 +158,37 @@ internal static class Program
             Check(File.Exists(larcOutput) && vm.HasArchive && vm.CurrentArchivePath == larcOutput && vm.StatusMessage.Contains("verified"), "General creates, verifies and opens an encrypted LARC");
             Check(larcOptions.Options.PasswordInput.Length == 0, "Closing General clears its draft password");
             vm.PasswordInput = string.Empty;
+
+            string deleteSource = Path.Combine(temporary, "delete source.txt");
+            File.WriteAllText(deleteSource, "Synthetic opt-in deletion fixture");
+            Task deleteCreation = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.AddZip, deleteSource));
+            Dispatcher.UIThread.RunJobs();
+            var deleteOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
+            deleteOptions.Options.ArchiveName = Path.Combine(temporary, "Created with deletion.zip");
+            deleteOptions.FindControl<CheckBox>("DeleteSourceAfterArchivingBox")!.IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            Check(deleteOptions.FindControl<CheckBox>("TestCreatedArchiveBox") is { IsChecked: true, IsEnabled: false }, "Selecting source deletion forces archive testing");
+            Capture(deleteOptions, "compression-delete.png");
+            string deleteOutput = deleteOptions.OutputPath;
+            Click(deleteOptions.FindControl<Button>("AcceptOptionsButton")!);
+            Pump(deleteCreation);
+            Check(!File.Exists(deleteSource) && File.Exists(deleteOutput) && vm.StatusMessage.Contains("Removed 1"), "General deletes only the verified archived source after publishing the archive");
+            Check(!vm.DeleteSourceAfterArchiving, "Source deletion is consumed for one operation");
+            string keptSource = Path.Combine(temporary, "cancel deletion.txt");
+            File.WriteAllText(keptSource, "Cancelled source must remain");
+            Task cancelDeleteCreation = window.HandleExplorerRequestAsync(new ExplorerRequest(ExplorerAction.AddZip, keptSource));
+            Dispatcher.UIThread.RunJobs();
+            var cancelDeleteOptions = (ArchiveOptionsWindow)window.OwnedWindows.Single();
+            Check(!cancelDeleteOptions.Options.DeleteSourceAfterArchiving, "The next General dialog does not inherit source deletion");
+            cancelDeleteOptions.FindControl<CheckBox>("DeleteSourceAfterArchivingBox")!.IsChecked = true;
+            Click(cancelDeleteOptions.FindControl<Button>("CancelOptionsButton")!);
+            Pump(cancelDeleteCreation);
+            Check(File.Exists(keptSource) && !vm.DeleteSourceAfterArchiving, "Cancelling General keeps sources and does not enable deletion");
+            using (var busyVm = new MainWindowViewModel { IsBusy = true, DeleteSourceAfterArchiving = true })
+            {
+                Pump(busyVm.CompressFilesToArchiveAsync(new[] { keptSource }, Path.Combine(temporary, "busy-output.zip")));
+                Check(!busyVm.DeleteSourceAfterArchiving && File.Exists(keptSource), "A rejected busy creation also consumes its deletion opt-in");
+            }
             Pump(vm.OpenArchiveFileAsync(archivePath));
 
             string compressionFolder = Path.Combine(temporary, "compression folder");

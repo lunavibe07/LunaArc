@@ -51,6 +51,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private int _selectedFormatIndex = 0;
 
     [ObservableProperty] private bool _testCreatedArchive;
+    [ObservableProperty] private bool _deleteSourceAfterArchiving;
 
     public bool CanEncrypt => SelectedFormatIndex == 0;
 
@@ -328,15 +329,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public async Task CompressFilesToArchiveAsync(IReadOnlyList<string> sourcePaths, string outputArchivePath)
     {
+        bool deleteSources = DeleteSourceAfterArchiving;
+        DeleteSourceAfterArchiving = false;
         if (IsBusy) return;
         _activeJob = new LunaJobController();
         IsBusy = true;
         ProgressPercent = 0;
         string? temporary = null;
+        bool verifyOutput = TestCreatedArchive || deleteSources;
+        bool published = false;
 
         try
         {
             outputArchivePath = CompressionOptionsViewModel.ValidateOutputPath(outputArchivePath, sourcePaths);
+            if (deleteSources) StatusMessage = "Capturing sources for verified deletion...";
+            var cleanup = deleteSources
+                ? await Task.Run(() => LunaArc.Core.Security.VerifiedSourceCleanup.CaptureAsync(sourcePaths, _activeJob.Token))
+                : null;
             string directory = Path.GetDirectoryName(outputArchivePath)!;
             Directory.CreateDirectory(directory);
             temporary = Path.Combine(directory, ".lunaarc-" + Guid.NewGuid().ToString("N") + "." + (SelectedFormatIndex switch { 1 => "zip", 2 => "tar.gz", _ => "larc" }));
@@ -365,7 +374,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     UpdateProgress(done, total, $"Compressing: {file}");
                 }));
 
-            if (TestCreatedArchive)
+            if (verifyOutput)
             {
                 StatusMessage = "Testing the new archive...";
                 var result = await Task.Run(() => _backend.TestArchiveAsync(temporary, PasswordInput.Length == 0 ? null : PasswordInput, _activeJob));
@@ -374,17 +383,26 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             _activeJob.Token.ThrowIfCancellationRequested();
             File.Move(temporary, outputArchivePath, overwrite: false);
             temporary = null;
+            published = true;
             ProgressPercent = 100;
+            string cleanupMessage = string.Empty;
+            if (cleanup != null)
+            {
+                StatusMessage = "Comparing archived contents before deleting sources...";
+                var result = await Task.Run(() => cleanup.DeleteArchivedSourcesAsync(_backend, outputArchivePath,
+                    PasswordInput.Length == 0 ? null : PasswordInput, _activeJob));
+                cleanupMessage = " " + result.Message;
+            }
             await OpenArchiveFileAsync(outputArchivePath);
-            StatusMessage = $"✅ Created{(TestCreatedArchive ? " and verified" : string.Empty)} archive: {outputArchivePath}";
+            StatusMessage = $"✅ Created{(verifyOutput ? " and verified" : string.Empty)} archive: {outputArchivePath}" + cleanupMessage;
         }
         catch (OperationCanceledException)
         {
-            StatusMessage = "🛑 Compression cancelled.";
+            StatusMessage = published ? $"Archive created at {outputArchivePath}. Source cleanup cancelled; remaining sources were kept." : "🛑 Compression cancelled.";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"❌ Compression error: {ex.Message}";
+            StatusMessage = published ? $"Archive created at {outputArchivePath}. Source cleanup did not finish: {ex.Message}" : $"❌ Compression error: {ex.Message}";
         }
         finally
         {
